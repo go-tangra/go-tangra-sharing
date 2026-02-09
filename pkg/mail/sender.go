@@ -15,13 +15,25 @@ type SMTPConfig struct {
 	Username string
 	Password string
 	From     string
-	UseTLS   bool
+	TLSMode  string // "none", "starttls", "tls" (implicit TLS)
 }
 
 // NewSMTPConfigFromEnv creates an SMTPConfig from environment variables.
 func NewSMTPConfigFromEnv() *SMTPConfig {
 	port, _ := strconv.Atoi(getEnv("SMTP_PORT", "587"))
-	useTLS, _ := strconv.ParseBool(getEnv("SMTP_USE_TLS", "true"))
+
+	// Determine TLS mode: SMTP_TLS_MODE takes priority, fall back to SMTP_USE_TLS for compat
+	tlsMode := getEnv("SMTP_TLS_MODE", "")
+	if tlsMode == "" {
+		useTLS, _ := strconv.ParseBool(getEnv("SMTP_USE_TLS", "true"))
+		if !useTLS {
+			tlsMode = "none"
+		} else if port == 465 {
+			tlsMode = "tls"
+		} else {
+			tlsMode = "starttls"
+		}
+	}
 
 	return &SMTPConfig{
 		Host:     getEnv("SMTP_HOST", "localhost"),
@@ -29,7 +41,7 @@ func NewSMTPConfigFromEnv() *SMTPConfig {
 		Username: getEnv("SMTP_USERNAME", ""),
 		Password: getEnv("SMTP_PASSWORD", ""),
 		From:     getEnv("SMTP_FROM", "noreply@example.com"),
-		UseTLS:   useTLS,
+		TLSMode:  tlsMode,
 	}
 }
 
@@ -66,13 +78,17 @@ func (s *Sender) Send(to, subject, htmlBody string) error {
 		auth = smtp.PlainAuth("", s.config.Username, s.config.Password, s.config.Host)
 	}
 
-	if s.config.UseTLS {
-		return s.sendWithTLS(addr, auth, to, []byte(message))
+	switch s.config.TLSMode {
+	case "tls":
+		return s.sendWithImplicitTLS(addr, auth, to, []byte(message))
+	case "starttls":
+		return s.sendWithSTARTTLS(addr, auth, to, []byte(message))
+	default:
+		return smtp.SendMail(addr, auth, s.config.From, []string{to}, []byte(message))
 	}
-	return smtp.SendMail(addr, auth, s.config.From, []string{to}, []byte(message))
 }
 
-func (s *Sender) sendWithTLS(addr string, auth smtp.Auth, to string, msg []byte) error {
+func (s *Sender) sendWithImplicitTLS(addr string, auth smtp.Auth, to string, msg []byte) error {
 	tlsConfig := &tls.Config{
 		ServerName: s.config.Host,
 		MinVersion: tls.VersionTLS12,
@@ -89,6 +105,28 @@ func (s *Sender) sendWithTLS(addr string, auth smtp.Auth, to string, msg []byte)
 	}
 	defer client.Close()
 
+	return s.sendViaSMTPClient(client, auth, to, msg)
+}
+
+func (s *Sender) sendWithSTARTTLS(addr string, auth smtp.Auth, to string, msg []byte) error {
+	client, err := smtp.Dial(addr)
+	if err != nil {
+		return fmt.Errorf("failed to connect to SMTP server: %w", err)
+	}
+	defer client.Close()
+
+	tlsConfig := &tls.Config{
+		ServerName: s.config.Host,
+		MinVersion: tls.VersionTLS12,
+	}
+	if err := client.StartTLS(tlsConfig); err != nil {
+		return fmt.Errorf("STARTTLS failed: %w", err)
+	}
+
+	return s.sendViaSMTPClient(client, auth, to, msg)
+}
+
+func (s *Sender) sendViaSMTPClient(client *smtp.Client, auth smtp.Auth, to string, msg []byte) error {
 	if auth != nil {
 		if err := client.Auth(auth); err != nil {
 			return fmt.Errorf("SMTP auth failed: %w", err)
