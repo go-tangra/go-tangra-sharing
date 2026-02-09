@@ -104,16 +104,32 @@ func NewWardenClient(ctx *bootstrap.Context) (*WardenClient, func(), error) {
 	return client, cleanup, nil
 }
 
+// forwardMetadata builds outgoing gRPC metadata by forwarding relevant headers
+// from the incoming context (tenant ID, user ID, username, roles).
+func forwardMetadata(ctx context.Context, tenantID uint32) context.Context {
+	outMD := grpcMD.New(map[string]string{
+		"x-md-global-tenant-id": fmt.Sprintf("%d", tenantID),
+	})
+
+	// Forward user identity from incoming context so upstream permission checks pass
+	if inMD, ok := grpcMD.FromIncomingContext(ctx); ok {
+		for _, key := range []string{"x-md-global-user-id", "x-md-global-username", "x-md-global-roles"} {
+			if vals := inMD.Get(key); len(vals) > 0 {
+				outMD.Set(key, vals[0])
+			}
+		}
+	}
+
+	return grpcMD.NewOutgoingContext(ctx, outMD)
+}
+
 // GetSecret retrieves secret metadata from Warden
 func (c *WardenClient) GetSecret(ctx context.Context, tenantID uint32, secretID string) (*wardenV1.Secret, error) {
 	if c == nil || c.conn == nil {
 		return nil, fmt.Errorf("warden client not available")
 	}
 
-	md := grpcMD.New(map[string]string{
-		"x-md-global-tenant-id": fmt.Sprintf("%d", tenantID),
-	})
-	ctx = grpcMD.NewOutgoingContext(ctx, md)
+	ctx = forwardMetadata(ctx, tenantID)
 
 	resp, err := c.SecretService.GetSecret(ctx, &wardenV1.GetSecretRequest{Id: secretID})
 	if err != nil {
@@ -128,10 +144,7 @@ func (c *WardenClient) GetSecretPassword(ctx context.Context, tenantID uint32, s
 		return "", fmt.Errorf("warden client not available")
 	}
 
-	md := grpcMD.New(map[string]string{
-		"x-md-global-tenant-id": fmt.Sprintf("%d", tenantID),
-	})
-	ctx = grpcMD.NewOutgoingContext(ctx, md)
+	ctx = forwardMetadata(ctx, tenantID)
 
 	resp, err := c.SecretService.GetSecretPassword(ctx, &wardenV1.GetSecretPasswordRequest{Id: secretID})
 	if err != nil {

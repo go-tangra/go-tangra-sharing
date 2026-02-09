@@ -15,7 +15,6 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
-	grpcMD "google.golang.org/grpc/metadata"
 
 	paperlessV1 "github.com/go-tangra/go-tangra-paperless/gen/go/paperless/service/v1"
 )
@@ -110,10 +109,7 @@ func (c *PaperlessClient) GetDocument(ctx context.Context, tenantID uint32, docu
 		return nil, fmt.Errorf("paperless client not available")
 	}
 
-	md := grpcMD.New(map[string]string{
-		"x-md-global-tenant-id": fmt.Sprintf("%d", tenantID),
-	})
-	ctx = grpcMD.NewOutgoingContext(ctx, md)
+	ctx = forwardMetadata(ctx, tenantID)
 
 	resp, err := c.DocumentService.GetDocument(ctx, &paperlessV1.GetDocumentRequest{Id: documentID})
 	if err != nil {
@@ -128,10 +124,7 @@ func (c *PaperlessClient) DownloadDocument(ctx context.Context, tenantID uint32,
 		return nil, "", "", fmt.Errorf("paperless client not available")
 	}
 
-	md := grpcMD.New(map[string]string{
-		"x-md-global-tenant-id": fmt.Sprintf("%d", tenantID),
-	})
-	ctx = grpcMD.NewOutgoingContext(ctx, md)
+	ctx = forwardMetadata(ctx, tenantID)
 
 	resp, err := c.DocumentService.DownloadDocument(ctx, &paperlessV1.DownloadDocumentRequest{Id: documentID})
 	if err != nil {
