@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -86,13 +87,17 @@ func handleViewShared(shareSvc *service.ShareService) kratosHttp.HandlerFunc {
 			return ctx.JSON(code, errorResponse(msg))
 		}
 
-		return ctx.JSON(http.StatusOK, map[string]interface{}{
+		result := map[string]interface{}{
 			"resourceType": resp.ResourceType.String(),
 			"resourceName": resp.ResourceName,
 			"password":     resp.Password,
 			"fileName":     resp.FileName,
 			"mimeType":     resp.MimeType,
-		})
+		}
+		if resp.ResourceType == sharingV1.ResourceType_RESOURCE_TYPE_DOCUMENT && len(resp.FileContent) > 0 {
+			result["fileContent"] = base64.StdEncoding.EncodeToString(resp.FileContent)
+		}
+		return ctx.JSON(http.StatusOK, result)
 	}
 }
 
