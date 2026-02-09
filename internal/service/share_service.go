@@ -14,6 +14,8 @@ import (
 	"github.com/go-tangra/go-tangra-sharing/pkg/crypto"
 	"github.com/go-tangra/go-tangra-sharing/pkg/mail"
 
+	"github.com/go-tangra/go-tangra-lcm/pkg/viewer"
+
 	sharingV1 "github.com/go-tangra/go-tangra-sharing/gen/go/sharing/service/v1"
 )
 
@@ -51,7 +53,9 @@ func NewShareService(
 		var err error
 		key, err = crypto.ParseEncryptionKey(keyHex)
 		if err != nil {
-			l.Errorf("Invalid SHARING_ENCRYPTION_KEY: %v", err)
+			l.Errorf("Invalid SHARING_ENCRYPTION_KEY, falling back to dev key: %v", err)
+			key = make([]byte, 32)
+			copy(key, []byte("sharing-dev-key-32-bytes-long!!!"))
 		}
 	} else {
 		l.Warn("SHARING_ENCRYPTION_KEY not set, generating random key (shares will not survive restarts)")
@@ -337,11 +341,14 @@ func (s *ShareService) ViewSharedContent(ctx context.Context, req *sharingV1.Vie
 
 // sendShareEmail sends the share notification email
 func (s *ShareService) sendShareEmail(tenantID uint32, recipientEmail, senderName, resourceName, resourceType, message, shareLink, templateID string) error {
+	// Use system viewer context for background goroutine (bypasses ENT privacy checks)
+	ctx := viewer.NewSystemViewerContext(context.Background())
+
 	// Try to load template
 	var subjectTmpl, bodyTmpl string
 
 	if templateID != "" {
-		tmpl, err := s.templateRepo.GetByID(context.Background(), templateID)
+		tmpl, err := s.templateRepo.GetByID(ctx, templateID)
 		if err == nil && tmpl != nil {
 			subjectTmpl = tmpl.Subject
 			bodyTmpl = tmpl.HTMLBody
@@ -350,7 +357,7 @@ func (s *ShareService) sendShareEmail(tenantID uint32, recipientEmail, senderNam
 
 	if subjectTmpl == "" || bodyTmpl == "" {
 		// Try default template
-		tmpl, err := s.templateRepo.GetDefault(context.Background(), tenantID)
+		tmpl, err := s.templateRepo.GetDefault(ctx, tenantID)
 		if err == nil && tmpl != nil {
 			subjectTmpl = tmpl.Subject
 			bodyTmpl = tmpl.HTMLBody
