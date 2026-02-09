@@ -2,8 +2,10 @@ package data
 
 import (
 	"context"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"github.com/go-kratos/kratos/v2/log"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -15,7 +17,9 @@ import (
 	entBootstrap "github.com/tx7do/kratos-bootstrap/database/ent"
 
 	"github.com/go-tangra/go-tangra-sharing/internal/data/ent"
+	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/emailtemplate"
 	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/migrate"
+	"github.com/go-tangra/go-tangra-sharing/pkg/mail"
 
 	_ "github.com/go-tangra/go-tangra-sharing/internal/data/ent/runtime"
 )
@@ -49,6 +53,9 @@ func NewEntClient(ctx *bootstrap.Context) (*entCrud.EntClient[*ent.Client], func
 			}
 		}
 
+		// Seed default email template
+		seedDefaultEmailTemplate(client, l)
+
 		return client
 	})
 
@@ -57,4 +64,39 @@ func NewEntClient(ctx *bootstrap.Context) (*entCrud.EntClient[*ent.Client], func
 			l.Error(err)
 		}
 	}, nil
+}
+
+const defaultTemplateID = "00000000-0000-0000-0000-000000000001"
+const defaultTemplateName = "Default Sharing Template"
+
+// seedDefaultEmailTemplate creates the default email template if it doesn't exist.
+func seedDefaultEmailTemplate(client *ent.Client, l *log.Helper) {
+	ctx := context.Background()
+
+	exists, err := client.EmailTemplate.Query().
+		Where(emailtemplate.IDEQ(defaultTemplateID)).
+		Exist(ctx)
+	if err != nil {
+		l.Warnf("Failed to check for default email template: %v", err)
+		return
+	}
+	if exists {
+		return
+	}
+
+	_, err = client.EmailTemplate.Create().
+		SetID(defaultTemplateID).
+		SetTenantID(0).
+		SetName(defaultTemplateName).
+		SetSubject(mail.DefaultSubjectTemplate).
+		SetHTMLBody(mail.DefaultHTMLBodyTemplate).
+		SetIsDefault(true).
+		SetCreateTime(time.Now()).
+		Save(ctx)
+	if err != nil {
+		l.Warnf("Failed to seed default email template: %v", err)
+		return
+	}
+
+	l.Info("Seeded default email template")
 }
