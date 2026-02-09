@@ -10,6 +10,7 @@ import (
 	"github.com/tx7do/kratos-bootstrap/bootstrap"
 	grpcMD "google.golang.org/grpc/metadata"
 
+	"github.com/go-tangra/go-tangra-lcm/pkg/viewer"
 	"github.com/go-tangra/go-tangra-sharing/internal/service"
 
 	sharingV1 "github.com/go-tangra/go-tangra-sharing/gen/go/sharing/service/v1"
@@ -73,8 +74,9 @@ func handleViewShared(shareSvc *service.ShareService) kratosHttp.HandlerFunc {
 			}
 		}
 
-		// Inject client IP into gRPC metadata for policy evaluation
+		// Inject client IP into gRPC metadata and system viewer for ENT privacy
 		grpcCtx := grpcMD.NewIncomingContext(ctx, grpcMD.Pairs("x-client-ip", viewerIP))
+		grpcCtx = viewer.NewSystemViewerContext(grpcCtx)
 
 		resp, err := shareSvc.ViewSharedContent(grpcCtx, &sharingV1.ViewSharedContentRequest{
 			Token: token,
@@ -115,8 +117,9 @@ func handleDownloadShared(shareSvc *service.ShareService) kratosHttp.HandlerFunc
 			}
 		}
 
-		// Inject client IP into gRPC metadata for policy evaluation
+		// Inject client IP into gRPC metadata and system viewer for ENT privacy
 		grpcCtx := grpcMD.NewIncomingContext(ctx, grpcMD.Pairs("x-client-ip", viewerIP))
+		grpcCtx = viewer.NewSystemViewerContext(grpcCtx)
 
 		resp, err := shareSvc.ViewSharedContent(grpcCtx, &sharingV1.ViewSharedContentRequest{
 			Token: token,
