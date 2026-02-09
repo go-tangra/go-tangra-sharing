@@ -229,8 +229,7 @@ message ViewSharedContentRequest {
     json_name = "token",
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string = {
-      min_len: 64
-      max_len: 64
+      len: 64
       pattern: "^[a-fA-F0-9]+$"
     }
   ];

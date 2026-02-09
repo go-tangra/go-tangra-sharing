@@ -1362,9 +1362,9 @@ const file_sharing_service_v1_share_proto_rawDesc = "" +
 	"\x06shares\x18\x01 \x03(\v2\x1e.sharing.service.v1.SharedLinkR\x06shares\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\rR\x05total\"D\n" +
 	"\x12RevokeShareRequest\x12.\n" +
-	"\x02id\x18\x01 \x01(\tB\x1e\xe0A\x02\xbaH\x18r\x16\x10\x01\x18$2\x10^[a-fA-F0-9\\-]+$R\x02id\"N\n" +
-	"\x18ViewSharedContentRequest\x122\n" +
-	"\x05token\x18\x01 \x01(\tB\x1c\xe0A\x02\xbaH\x16r\x14\x10@\x18@2\x0e^[a-fA-F0-9]+$R\x05token\"\x80\x02\n" +
+	"\x02id\x18\x01 \x01(\tB\x1e\xe0A\x02\xbaH\x18r\x16\x10\x01\x18$2\x10^[a-fA-F0-9\\-]+$R\x02id\"M\n" +
+	"\x18ViewSharedContentRequest\x121\n" +
+	"\x05token\x18\x01 \x01(\tB\x1b\xe0A\x02\xbaH\x15r\x132\x0e^[a-fA-F0-9]+$\x98\x01@R\x05token\"\x80\x02\n" +
 	"\x19ViewSharedContentResponse\x12E\n" +
 	"\rresource_type\x18\x01 \x01(\x0e2 .sharing.service.v1.ResourceTypeR\fresourceType\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12!\n" +
