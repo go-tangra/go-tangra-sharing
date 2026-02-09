@@ -1,0 +1,243 @@
+openapi: 3.0.3
+info:
+  title: Sharing Service API
+  description: Share secrets and documents via one-time email links
+  version: 1.0.0
+
+paths:
+  /v1/shares:
+    post:
+      summary: Create a new share
+      operationId: CreateShare
+      tags: [Shares]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShareRequest'
+      responses:
+        '200':
+          description: Share created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateShareResponse'
+    get:
+      summary: List shares
+      operationId: ListShares
+      tags: [Shares]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer }
+        - name: pageSize
+          in: query
+          schema: { type: integer }
+        - name: resourceType
+          in: query
+          schema: { type: string, enum: [SECRET, DOCUMENT] }
+        - name: recipientEmail
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of shares
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSharesResponse'
+
+  /v1/shares/{id}:
+    get:
+      summary: Get a share by ID
+      operationId: GetShare
+      tags: [Shares]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Share details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetShareResponse'
+    delete:
+      summary: Revoke a share
+      operationId: RevokeShare
+      tags: [Shares]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Share revoked
+
+  /v1/templates:
+    post:
+      summary: Create an email template
+      operationId: CreateTemplate
+      tags: [Templates]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTemplateRequest'
+      responses:
+        '200':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateTemplateResponse'
+    get:
+      summary: List email templates
+      operationId: ListTemplates
+      tags: [Templates]
+      responses:
+        '200':
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTemplatesResponse'
+
+  /v1/templates/{id}:
+    get:
+      summary: Get a template
+      operationId: GetTemplate
+      tags: [Templates]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Template details
+    put:
+      summary: Update a template
+      operationId: UpdateTemplate
+      tags: [Templates]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Template updated
+    delete:
+      summary: Delete a template
+      operationId: DeleteTemplate
+      tags: [Templates]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Template deleted
+
+  /v1/templates/preview:
+    post:
+      summary: Preview a template with sample data
+      operationId: PreviewTemplate
+      tags: [Templates]
+      responses:
+        '200':
+          description: Rendered template
+
+components:
+  schemas:
+    CreateShareRequest:
+      type: object
+      required: [resourceType, resourceId, recipientEmail]
+      properties:
+        resourceType: { type: string, enum: [SECRET, DOCUMENT] }
+        resourceId: { type: string }
+        recipientEmail: { type: string }
+        message: { type: string }
+        templateId: { type: string }
+
+    CreateShareResponse:
+      type: object
+      properties:
+        shareId: { type: string }
+        shareLink: { type: string }
+
+    GetShareResponse:
+      type: object
+      properties:
+        share:
+          $ref: '#/components/schemas/SharedLink'
+
+    ListSharesResponse:
+      type: object
+      properties:
+        shares:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedLink'
+        total: { type: integer }
+
+    SharedLink:
+      type: object
+      properties:
+        id: { type: string }
+        tenantId: { type: integer }
+        resourceType: { type: string }
+        resourceId: { type: string }
+        resourceName: { type: string }
+        recipientEmail: { type: string }
+        message: { type: string }
+        viewed: { type: boolean }
+        viewedAt: { type: string, format: date-time }
+        revoked: { type: boolean }
+        createdBy: { type: integer }
+        createTime: { type: string, format: date-time }
+
+    CreateTemplateRequest:
+      type: object
+      required: [name, subject, htmlBody]
+      properties:
+        name: { type: string }
+        subject: { type: string }
+        htmlBody: { type: string }
+        isDefault: { type: boolean }
+
+    CreateTemplateResponse:
+      type: object
+      properties:
+        template:
+          $ref: '#/components/schemas/EmailTemplate'
+
+    ListTemplatesResponse:
+      type: object
+      properties:
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailTemplate'
+        total: { type: integer }
+
+    EmailTemplate:
+      type: object
+      properties:
+        id: { type: string }
+        tenantId: { type: integer }
+        name: { type: string }
+        subject: { type: string }
+        htmlBody: { type: string }
+        isDefault: { type: boolean }
+        createdBy: { type: integer }
+        updatedBy: { type: integer }
+        createTime: { type: string, format: date-time }
+        updateTime: { type: string, format: date-time }

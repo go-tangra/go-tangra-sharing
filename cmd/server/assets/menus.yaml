@@ -1,0 +1,88 @@
+# Sharing Module Menu Definitions
+# This file defines the menu structure for the Sharing module
+# Used by admin service for dynamic menu registration
+
+module:
+  id: sharing
+  name: Sharing
+  description: Share secrets and documents via one-time email links
+
+menus:
+  - id: sharing
+    parent_id: null
+    type: CATALOG
+    name: Sharing
+    path: /sharing
+    icon: lucide:share-2
+    order: 450
+    authority:
+      - platform:admin
+      - tenant:manager
+
+  - id: sharing-links
+    parent_id: sharing
+    type: MENU
+    name: Shared Links
+    path: links
+    component: app/sharing/links/index.vue
+    icon: lucide:link
+    order: 1
+    authority:
+      - platform:admin
+      - tenant:manager
+
+  - id: sharing-templates
+    parent_id: sharing
+    type: MENU
+    name: Email Templates
+    path: templates
+    component: app/sharing/templates/index.vue
+    icon: lucide:mail
+    order: 2
+    authority:
+      - platform:admin
+      - tenant:manager
+
+permission_groups:
+  - name: Sharing
+    module: sharing
+    description: Sharing Module Permissions
+    permissions:
+      - name: View Shares
+        code: sharing.share.view
+        description: View shared links list
+      - name: Create Shares
+        code: sharing.share.create
+        description: Create new shared links
+      - name: Revoke Shares
+        code: sharing.share.revoke
+        description: Revoke shared links
+      - name: Manage Templates
+        code: sharing.template.manage
+        description: Create, update, and delete email templates
+
+roles:
+  - name: Sharing Administrator
+    code: sharing.admin
+    description: Full access to Sharing module
+    is_system: true
+    permissions:
+      - sharing.share.view
+      - sharing.share.create
+      - sharing.share.revoke
+      - sharing.template.manage
+
+  - name: Sharing Operator
+    code: sharing.operator
+    description: Can create and view shares
+    is_system: true
+    permissions:
+      - sharing.share.view
+      - sharing.share.create
+
+  - name: Sharing Viewer
+    code: sharing.viewer
+    description: Read-only access to Sharing module
+    is_system: true
+    permissions:
+      - sharing.share.view

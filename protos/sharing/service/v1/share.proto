@@ -1,0 +1,350 @@
+syntax = "proto3";
+
+package sharing.service.v1;
+
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// Share Service - manages shared links for secrets and documents
+service SharingShareService {
+  // Create a new share (sends email with one-time link)
+  rpc CreateShare(CreateShareRequest) returns (CreateShareResponse) {
+    option (google.api.http) = {
+      post: "/v1/shares"
+      body: "*"
+    };
+  }
+
+  // Get a share by ID
+  rpc GetShare(GetShareRequest) returns (GetShareResponse) {
+    option (google.api.http) = {
+      get: "/v1/shares/{id}"
+    };
+  }
+
+  // List shares for the current tenant
+  rpc ListShares(ListSharesRequest) returns (ListSharesResponse) {
+    option (google.api.http) = {
+      get: "/v1/shares"
+    };
+  }
+
+  // Revoke a share (invalidate the link)
+  rpc RevokeShare(RevokeShareRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/shares/{id}"
+    };
+  }
+
+  // View shared content (used by HTTP public endpoint internally)
+  rpc ViewSharedContent(ViewSharedContentRequest) returns (ViewSharedContentResponse) {
+    option (google.api.http) = {
+      get: "/v1/shared/{token}"
+    };
+  }
+
+  // Create a policy restriction for a share link
+  rpc CreateSharePolicy(CreateSharePolicyRequest) returns (CreateSharePolicyResponse) {
+    option (google.api.http) = {
+      post: "/v1/shares/{share_link_id}/policies"
+      body: "*"
+    };
+  }
+
+  // List policy restrictions for a share link
+  rpc ListSharePolicies(ListSharePoliciesRequest) returns (ListSharePoliciesResponse) {
+    option (google.api.http) = {
+      get: "/v1/shares/{share_link_id}/policies"
+    };
+  }
+
+  // Delete a policy restriction
+  rpc DeleteSharePolicy(DeleteSharePolicyRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/shares/{share_link_id}/policies/{id}"
+    };
+  }
+}
+
+// Share policy type (whitelist vs blacklist)
+enum SharePolicyType {
+  SHARE_POLICY_TYPE_UNSPECIFIED = 0;
+  SHARE_POLICY_TYPE_BLACKLIST = 1;
+  SHARE_POLICY_TYPE_WHITELIST = 2;
+}
+
+// Share policy method (what kind of restriction)
+enum SharePolicyMethod {
+  SHARE_POLICY_METHOD_UNSPECIFIED = 0;
+  SHARE_POLICY_METHOD_IP = 1;
+  SHARE_POLICY_METHOD_MAC = 2;
+  SHARE_POLICY_METHOD_REGION = 3;
+  SHARE_POLICY_METHOD_TIME = 4;
+  SHARE_POLICY_METHOD_DEVICE = 5;
+  SHARE_POLICY_METHOD_NETWORK = 6; // CIDR notation e.g. 10.1.111.0/24
+}
+
+// Resource type being shared
+enum ResourceType {
+  RESOURCE_TYPE_UNSPECIFIED = 0;
+  RESOURCE_TYPE_SECRET = 1;
+  RESOURCE_TYPE_DOCUMENT = 2;
+}
+
+// Share policy restriction entity
+message SharePolicy {
+  string id = 1 [json_name = "id"];
+  string share_link_id = 2 [json_name = "shareLinkId"];
+  SharePolicyType type = 3 [json_name = "type"];
+  SharePolicyMethod method = 4 [json_name = "method"];
+  string value = 5 [json_name = "value"];
+  string reason = 6 [json_name = "reason"];
+  google.protobuf.Timestamp create_time = 7 [json_name = "createTime"];
+}
+
+// Shared link entity
+message SharedLink {
+  string id = 1 [json_name = "id"];
+  uint32 tenant_id = 2 [json_name = "tenantId"];
+  ResourceType resource_type = 3 [json_name = "resourceType"];
+  string resource_id = 4 [json_name = "resourceId"];
+  string resource_name = 5 [json_name = "resourceName"];
+  string token = 6 [json_name = "token"];
+  string recipient_email = 7 [json_name = "recipientEmail"];
+  string message = 8 [json_name = "message"];
+  bool viewed = 9 [json_name = "viewed"];
+  optional google.protobuf.Timestamp viewed_at = 10 [json_name = "viewedAt"];
+  bool revoked = 11 [json_name = "revoked"];
+  optional uint32 created_by = 12 [json_name = "createdBy"];
+  google.protobuf.Timestamp create_time = 13 [json_name = "createTime"];
+  repeated SharePolicy policies = 14 [json_name = "policies"];
+}
+
+// Request to create a share
+message CreateShareRequest {
+  // Type of resource being shared
+  ResourceType resource_type = 1 [
+    json_name = "resourceType",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).enum = {not_in: [0]}
+  ];
+
+  // ID of the resource to share
+  string resource_id = 2 [
+    json_name = "resourceId",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 255
+    }
+  ];
+
+  // Recipient email address
+  string recipient_email = 3 [
+    json_name = "recipientEmail",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string = {
+      min_len: 3
+      max_len: 320
+    }
+  ];
+
+  // Optional message to include in the email
+  string message = 4 [
+    json_name = "message",
+    (buf.validate.field).string = {max_len: 2048}
+  ];
+
+  // Optional template ID (uses default if not specified)
+  optional string template_id = 5 [
+    json_name = "templateId",
+    (buf.validate.field).string = {
+      max_len: 36
+      pattern: "^[a-fA-F0-9\\-]*$"
+    }
+  ];
+
+  // Optional access restriction policies
+  repeated CreateSharePolicyInput policies = 6 [json_name = "policies"];
+}
+
+message CreateShareResponse {
+  string share_id = 1 [json_name = "shareId"];
+  string share_link = 2 [json_name = "shareLink"];
+}
+
+// Request to get a share by ID
+message GetShareRequest {
+  string id = 1 [
+    json_name = "id",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 36
+      pattern: "^[a-fA-F0-9\\-]+$"
+    }
+  ];
+}
+
+message GetShareResponse {
+  SharedLink share = 1 [json_name = "share"];
+}
+
+// Request to list shares
+message ListSharesRequest {
+  optional uint32 page = 1 [json_name = "page"];
+  optional uint32 page_size = 2 [json_name = "pageSize"];
+
+  // Filter by resource type
+  optional ResourceType resource_type = 3 [json_name = "resourceType"];
+
+  // Filter by recipient email
+  optional string recipient_email = 4 [json_name = "recipientEmail"];
+}
+
+message ListSharesResponse {
+  repeated SharedLink shares = 1 [json_name = "shares"];
+  uint32 total = 2 [json_name = "total"];
+}
+
+// Request to revoke a share
+message RevokeShareRequest {
+  string id = 1 [
+    json_name = "id",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 36
+      pattern: "^[a-fA-F0-9\\-]+$"
+    }
+  ];
+}
+
+// Request to view shared content (public, by token)
+message ViewSharedContentRequest {
+  string token = 1 [
+    json_name = "token",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string = {
+      min_len: 64
+      max_len: 64
+      pattern: "^[a-fA-F0-9]+$"
+    }
+  ];
+}
+
+message ViewSharedContentResponse {
+  ResourceType resource_type = 1 [json_name = "resourceType"];
+
+  // For secrets: the password
+  string password = 2 [json_name = "password"];
+
+  // For documents: file content
+  bytes file_content = 3 [json_name = "fileContent"];
+  string file_name = 4 [json_name = "fileName"];
+  string mime_type = 5 [json_name = "mimeType"];
+
+  // Resource metadata
+  string resource_name = 6 [json_name = "resourceName"];
+}
+
+// Input for creating a policy (used in both CreateShare and CreateSharePolicy)
+message CreateSharePolicyInput {
+  SharePolicyType type = 1 [
+    json_name = "type",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).enum = {not_in: [0]}
+  ];
+  SharePolicyMethod method = 2 [
+    json_name = "method",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).enum = {not_in: [0]}
+  ];
+  string value = 3 [
+    json_name = "value",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 512
+    }
+  ];
+  string reason = 4 [json_name = "reason"];
+}
+
+// Request to create a share policy
+message CreateSharePolicyRequest {
+  string share_link_id = 1 [
+    json_name = "shareLinkId",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 36
+      pattern: "^[a-fA-F0-9\\-]+$"
+    }
+  ];
+  SharePolicyType type = 2 [
+    json_name = "type",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).enum = {not_in: [0]}
+  ];
+  SharePolicyMethod method = 3 [
+    json_name = "method",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).enum = {not_in: [0]}
+  ];
+  string value = 4 [
+    json_name = "value",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 512
+    }
+  ];
+  string reason = 5 [json_name = "reason"];
+}
+
+message CreateSharePolicyResponse {
+  SharePolicy policy = 1 [json_name = "policy"];
+}
+
+// Request to list share policies
+message ListSharePoliciesRequest {
+  string share_link_id = 1 [
+    json_name = "shareLinkId",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 36
+      pattern: "^[a-fA-F0-9\\-]+$"
+    }
+  ];
+}
+
+message ListSharePoliciesResponse {
+  repeated SharePolicy policies = 1 [json_name = "policies"];
+}
+
+// Request to delete a share policy
+message DeleteSharePolicyRequest {
+  string share_link_id = 1 [
+    json_name = "shareLinkId",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 36
+      pattern: "^[a-fA-F0-9\\-]+$"
+    }
+  ];
+  string id = 2 [
+    json_name = "id",
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 36
+      pattern: "^[a-fA-F0-9\\-]+$"
+    }
+  ];
+}
