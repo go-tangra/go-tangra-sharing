@@ -183,7 +183,7 @@ func (s *ShareService) CreateShare(ctx context.Context, req *sharingV1.CreateSha
 	}
 
 	// Build share link
-	shareLink := fmt.Sprintf("%s/shared/%s", s.appHost, token)
+	shareLink := fmt.Sprintf("%s/#/shared/%s", s.appHost, token)
 
 	// Send email asynchronously
 	go func() {
