@@ -7,8 +7,7 @@ require (
 	entgo.io/ent v0.14.5
 	github.com/go-kratos/kratos/v2 v2.9.2
 	github.com/go-sql-driver/mysql v1.9.3
-	github.com/go-tangra/go-tangra-common v0.3.0
-	github.com/go-tangra/go-tangra-lcm v0.1.0
+	github.com/go-tangra/go-tangra-common v0.4.0
 	github.com/go-tangra/go-tangra-paperless v0.1.0
 	github.com/go-tangra/go-tangra-warden v0.1.0
 	github.com/google/uuid v1.6.0
@@ -28,6 +27,7 @@ require (
 
 require (
 	ariga.io/atlas v1.0.0 // indirect
+	cel.dev/expr v0.25.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/XSAM/otelsql v0.41.0 // indirect
@@ -81,7 +81,7 @@ require (
 	github.com/tx7do/go-crud/api v0.0.7 // indirect
 	github.com/tx7do/go-crud/audit v0.0.2 // indirect
 	github.com/tx7do/go-crud/pagination v0.0.11 // indirect
-	github.com/tx7do/go-crud/viewer v0.0.5 // indirect
+	github.com/tx7do/go-crud/viewer v0.0.6 // indirect
 	github.com/tx7do/go-utils v1.1.34 // indirect
 	github.com/tx7do/go-utils/id v0.0.2 // indirect
 	github.com/tx7do/go-utils/mapper v0.0.3 // indirect

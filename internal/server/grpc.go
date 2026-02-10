@@ -12,7 +12,7 @@ import (
 	"github.com/go-kratos/kratos/v2/transport/grpc"
 	"github.com/tx7do/kratos-bootstrap/bootstrap"
 
-	"github.com/go-tangra/go-tangra-lcm/pkg/viewer"
+	"github.com/go-tangra/go-tangra-common/viewer"
 
 	sharingV1 "github.com/go-tangra/go-tangra-sharing/gen/go/sharing/service/v1"
 	"github.com/go-tangra/go-tangra-sharing/internal/cert"

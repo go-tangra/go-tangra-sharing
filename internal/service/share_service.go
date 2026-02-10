@@ -14,7 +14,7 @@ import (
 	"github.com/go-tangra/go-tangra-sharing/pkg/crypto"
 	"github.com/go-tangra/go-tangra-sharing/pkg/mail"
 
-	"github.com/go-tangra/go-tangra-lcm/pkg/viewer"
+	"github.com/go-tangra/go-tangra-common/viewer"
 
 	sharingV1 "github.com/go-tangra/go-tangra-sharing/gen/go/sharing/service/v1"
 )

@@ -11,7 +11,7 @@ import (
 	"github.com/tx7do/kratos-bootstrap/bootstrap"
 	grpcMD "google.golang.org/grpc/metadata"
 
-	"github.com/go-tangra/go-tangra-lcm/pkg/viewer"
+	"github.com/go-tangra/go-tangra-common/viewer"
 	"github.com/go-tangra/go-tangra-sharing/internal/service"
 
 	sharingV1 "github.com/go-tangra/go-tangra-sharing/gen/go/sharing/service/v1"
