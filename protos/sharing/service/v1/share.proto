@@ -7,6 +7,7 @@ import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+import "redact/v3/redact.proto";
 
 // Share Service - manages shared links for secrets and documents
 service SharingShareService {
@@ -112,7 +113,7 @@ message SharedLink {
   ResourceType resource_type = 3 [json_name = "resourceType"];
   string resource_id = 4 [json_name = "resourceId"];
   string resource_name = 5 [json_name = "resourceName"];
-  string token = 6 [json_name = "token"];
+  string token = 6 [json_name = "token", (redact.v3.value).string = ""];
   string recipient_email = 7 [json_name = "recipientEmail"];
   string message = 8 [json_name = "message"];
   bool viewed = 9 [json_name = "viewed"];
@@ -239,10 +240,10 @@ message ViewSharedContentResponse {
   ResourceType resource_type = 1 [json_name = "resourceType"];
 
   // For secrets: the password
-  string password = 2 [json_name = "password"];
+  string password = 2 [json_name = "password", (redact.v3.value).string = ""];
 
   // For documents: file content
-  bytes file_content = 3 [json_name = "fileContent"];
+  bytes file_content = 3 [json_name = "fileContent", (redact.v3.value).bytes = ""];
   string file_name = 4 [json_name = "fileName"];
   string mime_type = 5 [json_name = "mimeType"];
 

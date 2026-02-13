@@ -101,8 +101,8 @@ func NewGRPCServer(
 	srv := grpc.NewServer(opts...)
 
 	// Register services
-	sharingV1.RegisterSharingShareServiceServer(srv, shareSvc)
-	sharingV1.RegisterSharingTemplateServiceServer(srv, templateSvc)
+	sharingV1.RegisterRedactedSharingShareServiceServer(srv, shareSvc, nil)
+	sharingV1.RegisterRedactedSharingTemplateServiceServer(srv, templateSvc, nil)
 
 	return srv
 }

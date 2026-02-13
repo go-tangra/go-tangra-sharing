@@ -8,6 +8,7 @@ package sharingpb
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	_ "github.com/menta2k/protoc-gen-redact/v3/redact/v3"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -1297,7 +1298,7 @@ var File_sharing_service_v1_share_proto protoreflect.FileDescriptor
 
 const file_sharing_service_v1_share_proto_rawDesc = "" +
 	"\n" +
-	"\x1esharing/service/v1/share.proto\x12\x12sharing.service.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa4\x02\n" +
+	"\x1esharing/service/v1/share.proto\x12\x12sharing.service.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16redact/v3/redact.proto\"\xa4\x02\n" +
 	"\vSharePolicy\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\"\n" +
 	"\rshare_link_id\x18\x02 \x01(\tR\vshareLinkId\x127\n" +
@@ -1306,7 +1307,7 @@ const file_sharing_service_v1_share_proto_rawDesc = "" +
 	"\x05value\x18\x05 \x01(\tR\x05value\x12\x16\n" +
 	"\x06reason\x18\x06 \x01(\tR\x06reason\x12;\n" +
 	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\"\xca\x04\n" +
+	"createTime\"\xd2\x04\n" +
 	"\n" +
 	"SharedLink\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
@@ -1314,8 +1315,8 @@ const file_sharing_service_v1_share_proto_rawDesc = "" +
 	"\rresource_type\x18\x03 \x01(\x0e2 .sharing.service.v1.ResourceTypeR\fresourceType\x12\x1f\n" +
 	"\vresource_id\x18\x04 \x01(\tR\n" +
 	"resourceId\x12#\n" +
-	"\rresource_name\x18\x05 \x01(\tR\fresourceName\x12\x14\n" +
-	"\x05token\x18\x06 \x01(\tR\x05token\x12'\n" +
+	"\rresource_name\x18\x05 \x01(\tR\fresourceName\x12\x1c\n" +
+	"\x05token\x18\x06 \x01(\tB\x06ڶ\x1a\x02z\x00R\x05token\x12'\n" +
 	"\x0frecipient_email\x18\a \x01(\tR\x0erecipientEmail\x12\x18\n" +
 	"\amessage\x18\b \x01(\tR\amessage\x12\x16\n" +
 	"\x06viewed\x18\t \x01(\bR\x06viewed\x12<\n" +
@@ -1364,11 +1365,11 @@ const file_sharing_service_v1_share_proto_rawDesc = "" +
 	"\x12RevokeShareRequest\x12.\n" +
 	"\x02id\x18\x01 \x01(\tB\x1e\xe0A\x02\xbaH\x18r\x16\x10\x01\x18$2\x10^[a-fA-F0-9\\-]+$R\x02id\"M\n" +
 	"\x18ViewSharedContentRequest\x121\n" +
-	"\x05token\x18\x01 \x01(\tB\x1b\xe0A\x02\xbaH\x15r\x132\x0e^[a-fA-F0-9]+$\x98\x01@R\x05token\"\x80\x02\n" +
+	"\x05token\x18\x01 \x01(\tB\x1b\xe0A\x02\xbaH\x15r\x132\x0e^[a-fA-F0-9]+$\x98\x01@R\x05token\"\x91\x02\n" +
 	"\x19ViewSharedContentResponse\x12E\n" +
-	"\rresource_type\x18\x01 \x01(\x0e2 .sharing.service.v1.ResourceTypeR\fresourceType\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\x12!\n" +
-	"\ffile_content\x18\x03 \x01(\fR\vfileContent\x12\x1b\n" +
+	"\rresource_type\x18\x01 \x01(\x0e2 .sharing.service.v1.ResourceTypeR\fresourceType\x12\"\n" +
+	"\bpassword\x18\x02 \x01(\tB\x06ڶ\x1a\x02z\x00R\bpassword\x12*\n" +
+	"\ffile_content\x18\x03 \x01(\fB\aڶ\x1a\x03\x82\x01\x00R\vfileContent\x12\x1b\n" +
 	"\tfile_name\x18\x04 \x01(\tR\bfileName\x12\x1b\n" +
 	"\tmime_type\x18\x05 \x01(\tR\bmimeType\x12#\n" +
 	"\rresource_name\x18\x06 \x01(\tR\fresourceName\"\xe7\x01\n" +
