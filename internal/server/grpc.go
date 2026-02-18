@@ -38,6 +38,7 @@ func NewGRPCServer(
 	certManager *cert.CertManager,
 	shareSvc *service.ShareService,
 	templateSvc *service.TemplateService,
+	backupSvc *service.BackupService,
 ) *grpc.Server {
 	cfg := ctx.GetConfig()
 	l := ctx.NewLoggerHelper("sharing/grpc")
@@ -91,6 +92,8 @@ func NewGRPCServer(
 		audit.WithSkipOperations(
 			"/grpc.health.v1.Health/Check",
 			"/grpc.health.v1.Health/Watch",
+			"/sharing.service.v1.BackupService/ExportBackup",
+			"/sharing.service.v1.BackupService/ImportBackup",
 		),
 	))
 
@@ -103,6 +106,7 @@ func NewGRPCServer(
 	// Register services
 	sharingV1.RegisterRedactedSharingShareServiceServer(srv, shareSvc, nil)
 	sharingV1.RegisterRedactedSharingTemplateServiceServer(srv, templateSvc, nil)
+	sharingV1.RegisterRedactedBackupServiceServer(srv, backupSvc, nil)
 
 	return srv
 }

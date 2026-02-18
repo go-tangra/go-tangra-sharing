@@ -44,7 +44,8 @@ func initApp(context *bootstrap.Context) (*kratos.App, func(), error) {
 	sender := data.NewMailSender()
 	shareService := service.NewShareService(context, sharedLinkRepo, emailTemplateRepo, sharePolicyRepo, wardenClient, paperlessClient, sender)
 	templateService := service.NewTemplateService(context, emailTemplateRepo)
-	grpcServer := server.NewGRPCServer(context, certManager, shareService, templateService)
+	backupService := service.NewBackupService(context, entClient)
+	grpcServer := server.NewGRPCServer(context, certManager, shareService, templateService, backupService)
 	httpServer := server.NewHTTPServer(context, shareService)
 	app := newApp(context, grpcServer, httpServer)
 	return app, func() {
