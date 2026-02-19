@@ -310,7 +310,10 @@ func (s *ShareService) ViewSharedContent(ctx context.Context, req *sharingV1.Vie
 	}
 
 	// Decrypt content
-	plaintext, err := crypto.DecryptContent(entity.EncryptedContent, entity.EncryptionNonce, s.encryptionKey)
+	if entity.EncryptedContent == nil || entity.EncryptionNonce == nil {
+		return nil, sharingV1.ErrorEncryptionError("share content is no longer available")
+	}
+	plaintext, err := crypto.DecryptContent(*entity.EncryptedContent, *entity.EncryptionNonce, s.encryptionKey)
 	if err != nil {
 		s.log.Errorf("Failed to decrypt content: %v", err)
 		return nil, sharingV1.ErrorEncryptionError("failed to decrypt content")

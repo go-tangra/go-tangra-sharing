@@ -311,12 +311,6 @@ func (_c *SharedLinkCreate) check() error {
 			return &ValidationError{Name: "token", err: fmt.Errorf(`ent: validator failed for field "SharedLink.token": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.EncryptedContent(); !ok {
-		return &ValidationError{Name: "encrypted_content", err: errors.New(`ent: missing required field "SharedLink.encrypted_content"`)}
-	}
-	if _, ok := _c.mutation.EncryptionNonce(); !ok {
-		return &ValidationError{Name: "encryption_nonce", err: errors.New(`ent: missing required field "SharedLink.encryption_nonce"`)}
-	}
 	if _, ok := _c.mutation.RecipientEmail(); !ok {
 		return &ValidationError{Name: "recipient_email", err: errors.New(`ent: missing required field "SharedLink.recipient_email"`)}
 	}
@@ -425,11 +419,11 @@ func (_c *SharedLinkCreate) createSpec() (*SharedLink, *sqlgraph.CreateSpec) {
 	}
 	if value, ok := _c.mutation.EncryptedContent(); ok {
 		_spec.SetField(sharedlink.FieldEncryptedContent, field.TypeBytes, value)
-		_node.EncryptedContent = value
+		_node.EncryptedContent = &value
 	}
 	if value, ok := _c.mutation.EncryptionNonce(); ok {
 		_spec.SetField(sharedlink.FieldEncryptionNonce, field.TypeBytes, value)
-		_node.EncryptionNonce = value
+		_node.EncryptionNonce = &value
 	}
 	if value, ok := _c.mutation.RecipientEmail(); ok {
 		_spec.SetField(sharedlink.FieldRecipientEmail, field.TypeString, value)
@@ -631,6 +625,12 @@ func (u *SharedLinkUpsert) UpdateEncryptedContent() *SharedLinkUpsert {
 	return u
 }
 
+// ClearEncryptedContent clears the value of the "encrypted_content" field.
+func (u *SharedLinkUpsert) ClearEncryptedContent() *SharedLinkUpsert {
+	u.SetNull(sharedlink.FieldEncryptedContent)
+	return u
+}
+
 // SetEncryptionNonce sets the "encryption_nonce" field.
 func (u *SharedLinkUpsert) SetEncryptionNonce(v []byte) *SharedLinkUpsert {
 	u.Set(sharedlink.FieldEncryptionNonce, v)
@@ -640,6 +640,12 @@ func (u *SharedLinkUpsert) SetEncryptionNonce(v []byte) *SharedLinkUpsert {
 // UpdateEncryptionNonce sets the "encryption_nonce" field to the value that was provided on create.
 func (u *SharedLinkUpsert) UpdateEncryptionNonce() *SharedLinkUpsert {
 	u.SetExcluded(sharedlink.FieldEncryptionNonce)
+	return u
+}
+
+// ClearEncryptionNonce clears the value of the "encryption_nonce" field.
+func (u *SharedLinkUpsert) ClearEncryptionNonce() *SharedLinkUpsert {
+	u.SetNull(sharedlink.FieldEncryptionNonce)
 	return u
 }
 
@@ -945,6 +951,13 @@ func (u *SharedLinkUpsertOne) UpdateEncryptedContent() *SharedLinkUpsertOne {
 	})
 }
 
+// ClearEncryptedContent clears the value of the "encrypted_content" field.
+func (u *SharedLinkUpsertOne) ClearEncryptedContent() *SharedLinkUpsertOne {
+	return u.Update(func(s *SharedLinkUpsert) {
+		s.ClearEncryptedContent()
+	})
+}
+
 // SetEncryptionNonce sets the "encryption_nonce" field.
 func (u *SharedLinkUpsertOne) SetEncryptionNonce(v []byte) *SharedLinkUpsertOne {
 	return u.Update(func(s *SharedLinkUpsert) {
@@ -956,6 +969,13 @@ func (u *SharedLinkUpsertOne) SetEncryptionNonce(v []byte) *SharedLinkUpsertOne 
 func (u *SharedLinkUpsertOne) UpdateEncryptionNonce() *SharedLinkUpsertOne {
 	return u.Update(func(s *SharedLinkUpsert) {
 		s.UpdateEncryptionNonce()
+	})
+}
+
+// ClearEncryptionNonce clears the value of the "encryption_nonce" field.
+func (u *SharedLinkUpsertOne) ClearEncryptionNonce() *SharedLinkUpsertOne {
+	return u.Update(func(s *SharedLinkUpsert) {
+		s.ClearEncryptionNonce()
 	})
 }
 
@@ -1446,6 +1466,13 @@ func (u *SharedLinkUpsertBulk) UpdateEncryptedContent() *SharedLinkUpsertBulk {
 	})
 }
 
+// ClearEncryptedContent clears the value of the "encrypted_content" field.
+func (u *SharedLinkUpsertBulk) ClearEncryptedContent() *SharedLinkUpsertBulk {
+	return u.Update(func(s *SharedLinkUpsert) {
+		s.ClearEncryptedContent()
+	})
+}
+
 // SetEncryptionNonce sets the "encryption_nonce" field.
 func (u *SharedLinkUpsertBulk) SetEncryptionNonce(v []byte) *SharedLinkUpsertBulk {
 	return u.Update(func(s *SharedLinkUpsert) {
@@ -1457,6 +1484,13 @@ func (u *SharedLinkUpsertBulk) SetEncryptionNonce(v []byte) *SharedLinkUpsertBul
 func (u *SharedLinkUpsertBulk) UpdateEncryptionNonce() *SharedLinkUpsertBulk {
 	return u.Update(func(s *SharedLinkUpsert) {
 		s.UpdateEncryptionNonce()
+	})
+}
+
+// ClearEncryptionNonce clears the value of the "encryption_nonce" field.
+func (u *SharedLinkUpsertBulk) ClearEncryptionNonce() *SharedLinkUpsertBulk {
+	return u.Update(func(s *SharedLinkUpsert) {
+		s.ClearEncryptionNonce()
 	})
 }
 

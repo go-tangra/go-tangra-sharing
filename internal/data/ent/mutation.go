@@ -2661,7 +2661,7 @@ func (m *SharedLinkMutation) EncryptedContent() (r []byte, exists bool) {
 // OldEncryptedContent returns the old "encrypted_content" field's value of the SharedLink entity.
 // If the SharedLink object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *SharedLinkMutation) OldEncryptedContent(ctx context.Context) (v []byte, err error) {
+func (m *SharedLinkMutation) OldEncryptedContent(ctx context.Context) (v *[]byte, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldEncryptedContent is only allowed on UpdateOne operations")
 	}
@@ -2675,9 +2675,22 @@ func (m *SharedLinkMutation) OldEncryptedContent(ctx context.Context) (v []byte,
 	return oldValue.EncryptedContent, nil
 }
 
+// ClearEncryptedContent clears the value of the "encrypted_content" field.
+func (m *SharedLinkMutation) ClearEncryptedContent() {
+	m.encrypted_content = nil
+	m.clearedFields[sharedlink.FieldEncryptedContent] = struct{}{}
+}
+
+// EncryptedContentCleared returns if the "encrypted_content" field was cleared in this mutation.
+func (m *SharedLinkMutation) EncryptedContentCleared() bool {
+	_, ok := m.clearedFields[sharedlink.FieldEncryptedContent]
+	return ok
+}
+
 // ResetEncryptedContent resets all changes to the "encrypted_content" field.
 func (m *SharedLinkMutation) ResetEncryptedContent() {
 	m.encrypted_content = nil
+	delete(m.clearedFields, sharedlink.FieldEncryptedContent)
 }
 
 // SetEncryptionNonce sets the "encryption_nonce" field.
@@ -2697,7 +2710,7 @@ func (m *SharedLinkMutation) EncryptionNonce() (r []byte, exists bool) {
 // OldEncryptionNonce returns the old "encryption_nonce" field's value of the SharedLink entity.
 // If the SharedLink object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *SharedLinkMutation) OldEncryptionNonce(ctx context.Context) (v []byte, err error) {
+func (m *SharedLinkMutation) OldEncryptionNonce(ctx context.Context) (v *[]byte, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldEncryptionNonce is only allowed on UpdateOne operations")
 	}
@@ -2711,9 +2724,22 @@ func (m *SharedLinkMutation) OldEncryptionNonce(ctx context.Context) (v []byte, 
 	return oldValue.EncryptionNonce, nil
 }
 
+// ClearEncryptionNonce clears the value of the "encryption_nonce" field.
+func (m *SharedLinkMutation) ClearEncryptionNonce() {
+	m.encryption_nonce = nil
+	m.clearedFields[sharedlink.FieldEncryptionNonce] = struct{}{}
+}
+
+// EncryptionNonceCleared returns if the "encryption_nonce" field was cleared in this mutation.
+func (m *SharedLinkMutation) EncryptionNonceCleared() bool {
+	_, ok := m.clearedFields[sharedlink.FieldEncryptionNonce]
+	return ok
+}
+
 // ResetEncryptionNonce resets all changes to the "encryption_nonce" field.
 func (m *SharedLinkMutation) ResetEncryptionNonce() {
 	m.encryption_nonce = nil
+	delete(m.clearedFields, sharedlink.FieldEncryptionNonce)
 }
 
 // SetRecipientEmail sets the "recipient_email" field.
@@ -3405,6 +3431,12 @@ func (m *SharedLinkMutation) ClearedFields() []string {
 	if m.FieldCleared(sharedlink.FieldTenantID) {
 		fields = append(fields, sharedlink.FieldTenantID)
 	}
+	if m.FieldCleared(sharedlink.FieldEncryptedContent) {
+		fields = append(fields, sharedlink.FieldEncryptedContent)
+	}
+	if m.FieldCleared(sharedlink.FieldEncryptionNonce) {
+		fields = append(fields, sharedlink.FieldEncryptionNonce)
+	}
 	if m.FieldCleared(sharedlink.FieldMessage) {
 		fields = append(fields, sharedlink.FieldMessage)
 	}
@@ -3445,6 +3477,12 @@ func (m *SharedLinkMutation) ClearField(name string) error {
 		return nil
 	case sharedlink.FieldTenantID:
 		m.ClearTenantID()
+		return nil
+	case sharedlink.FieldEncryptedContent:
+		m.ClearEncryptedContent()
+		return nil
+	case sharedlink.FieldEncryptionNonce:
+		m.ClearEncryptionNonce()
 		return nil
 	case sharedlink.FieldMessage:
 		m.ClearMessage()

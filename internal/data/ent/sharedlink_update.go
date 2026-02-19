@@ -158,9 +158,21 @@ func (_u *SharedLinkUpdate) SetEncryptedContent(v []byte) *SharedLinkUpdate {
 	return _u
 }
 
+// ClearEncryptedContent clears the value of the "encrypted_content" field.
+func (_u *SharedLinkUpdate) ClearEncryptedContent() *SharedLinkUpdate {
+	_u.mutation.ClearEncryptedContent()
+	return _u
+}
+
 // SetEncryptionNonce sets the "encryption_nonce" field.
 func (_u *SharedLinkUpdate) SetEncryptionNonce(v []byte) *SharedLinkUpdate {
 	_u.mutation.SetEncryptionNonce(v)
+	return _u
+}
+
+// ClearEncryptionNonce clears the value of the "encryption_nonce" field.
+func (_u *SharedLinkUpdate) ClearEncryptionNonce() *SharedLinkUpdate {
+	_u.mutation.ClearEncryptionNonce()
 	return _u
 }
 
@@ -423,8 +435,14 @@ func (_u *SharedLinkUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.EncryptedContent(); ok {
 		_spec.SetField(sharedlink.FieldEncryptedContent, field.TypeBytes, value)
 	}
+	if _u.mutation.EncryptedContentCleared() {
+		_spec.ClearField(sharedlink.FieldEncryptedContent, field.TypeBytes)
+	}
 	if value, ok := _u.mutation.EncryptionNonce(); ok {
 		_spec.SetField(sharedlink.FieldEncryptionNonce, field.TypeBytes, value)
+	}
+	if _u.mutation.EncryptionNonceCleared() {
+		_spec.ClearField(sharedlink.FieldEncryptionNonce, field.TypeBytes)
 	}
 	if value, ok := _u.mutation.RecipientEmail(); ok {
 		_spec.SetField(sharedlink.FieldRecipientEmail, field.TypeString, value)
@@ -610,9 +628,21 @@ func (_u *SharedLinkUpdateOne) SetEncryptedContent(v []byte) *SharedLinkUpdateOn
 	return _u
 }
 
+// ClearEncryptedContent clears the value of the "encrypted_content" field.
+func (_u *SharedLinkUpdateOne) ClearEncryptedContent() *SharedLinkUpdateOne {
+	_u.mutation.ClearEncryptedContent()
+	return _u
+}
+
 // SetEncryptionNonce sets the "encryption_nonce" field.
 func (_u *SharedLinkUpdateOne) SetEncryptionNonce(v []byte) *SharedLinkUpdateOne {
 	_u.mutation.SetEncryptionNonce(v)
+	return _u
+}
+
+// ClearEncryptionNonce clears the value of the "encryption_nonce" field.
+func (_u *SharedLinkUpdateOne) ClearEncryptionNonce() *SharedLinkUpdateOne {
+	_u.mutation.ClearEncryptionNonce()
 	return _u
 }
 
@@ -905,8 +935,14 @@ func (_u *SharedLinkUpdateOne) sqlSave(ctx context.Context) (_node *SharedLink, 
 	if value, ok := _u.mutation.EncryptedContent(); ok {
 		_spec.SetField(sharedlink.FieldEncryptedContent, field.TypeBytes, value)
 	}
+	if _u.mutation.EncryptedContentCleared() {
+		_spec.ClearField(sharedlink.FieldEncryptedContent, field.TypeBytes)
+	}
 	if value, ok := _u.mutation.EncryptionNonce(); ok {
 		_spec.SetField(sharedlink.FieldEncryptionNonce, field.TypeBytes, value)
+	}
+	if _u.mutation.EncryptionNonceCleared() {
+		_spec.ClearField(sharedlink.FieldEncryptionNonce, field.TypeBytes)
 	}
 	if value, ok := _u.mutation.RecipientEmail(); ok {
 		_spec.SetField(sharedlink.FieldRecipientEmail, field.TypeString, value)

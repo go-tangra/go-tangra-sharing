@@ -37,9 +37,9 @@ type SharedLink struct {
 	// Unique share token (64 hex chars)
 	Token string `json:"token,omitempty"`
 	// AES-256-GCM encrypted content
-	EncryptedContent []byte `json:"encrypted_content,omitempty"`
+	EncryptedContent *[]byte `json:"encrypted_content,omitempty"`
 	// AES-256-GCM nonce
-	EncryptionNonce []byte `json:"encryption_nonce,omitempty"`
+	EncryptionNonce *[]byte `json:"encryption_nonce,omitempty"`
 	// Recipient email address
 	RecipientEmail string `json:"recipient_email,omitempty"`
 	// Optional message to recipient
@@ -156,13 +156,13 @@ func (_m *SharedLink) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field encrypted_content", values[i])
 			} else if value != nil {
-				_m.EncryptedContent = *value
+				_m.EncryptedContent = value
 			}
 		case sharedlink.FieldEncryptionNonce:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field encryption_nonce", values[i])
 			} else if value != nil {
-				_m.EncryptionNonce = *value
+				_m.EncryptionNonce = value
 			}
 		case sharedlink.FieldRecipientEmail:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -281,11 +281,15 @@ func (_m *SharedLink) String() string {
 	builder.WriteString("token=")
 	builder.WriteString(_m.Token)
 	builder.WriteString(", ")
-	builder.WriteString("encrypted_content=")
-	builder.WriteString(fmt.Sprintf("%v", _m.EncryptedContent))
+	if v := _m.EncryptedContent; v != nil {
+		builder.WriteString("encrypted_content=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
-	builder.WriteString("encryption_nonce=")
-	builder.WriteString(fmt.Sprintf("%v", _m.EncryptionNonce))
+	if v := _m.EncryptionNonce; v != nil {
+		builder.WriteString("encryption_nonce=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("recipient_email=")
 	builder.WriteString(_m.RecipientEmail)

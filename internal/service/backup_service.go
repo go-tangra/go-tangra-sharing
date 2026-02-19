@@ -315,13 +315,11 @@ func (s *BackupService) importSharedLinks(ctx context.Context, client *ent.Clien
 				result.Skipped++
 				continue
 			}
-			_, err := client.SharedLink.UpdateOneID(e.ID).
+			builder := client.SharedLink.UpdateOneID(e.ID).
 				SetResourceType(e.ResourceType).
 				SetResourceID(e.ResourceID).
 				SetResourceName(e.ResourceName).
 				SetToken(e.Token).
-				SetEncryptedContent(e.EncryptedContent).
-				SetEncryptionNonce(e.EncryptionNonce).
 				SetRecipientEmail(e.RecipientEmail).
 				SetMessage(e.Message).
 				SetNillableTemplateID(e.TemplateID).
@@ -329,8 +327,18 @@ func (s *BackupService) importSharedLinks(ctx context.Context, client *ent.Clien
 				SetNillableViewedAt(e.ViewedAt).
 				SetViewedIP(e.ViewedIP).
 				SetRevoked(e.Revoked).
-				SetNillableCreateBy(e.CreateBy).
-				Save(ctx)
+				SetNillableCreateBy(e.CreateBy)
+			if e.EncryptedContent != nil {
+				builder.SetEncryptedContent(*e.EncryptedContent)
+			} else {
+				builder.ClearEncryptedContent()
+			}
+			if e.EncryptionNonce != nil {
+				builder.SetEncryptionNonce(*e.EncryptionNonce)
+			} else {
+				builder.ClearEncryptionNonce()
+			}
+			_, err := builder.Save(ctx)
 			if err != nil {
 				warnings = append(warnings, fmt.Sprintf("sharedLinks: update %s: %v", e.ID, err))
 				result.Failed++
@@ -338,15 +346,13 @@ func (s *BackupService) importSharedLinks(ctx context.Context, client *ent.Clien
 			}
 			result.Updated++
 		} else {
-			_, err := client.SharedLink.Create().
+			createBuilder := client.SharedLink.Create().
 				SetID(e.ID).
 				SetNillableTenantID(&tid).
 				SetResourceType(e.ResourceType).
 				SetResourceID(e.ResourceID).
 				SetResourceName(e.ResourceName).
 				SetToken(e.Token).
-				SetEncryptedContent(e.EncryptedContent).
-				SetEncryptionNonce(e.EncryptionNonce).
 				SetRecipientEmail(e.RecipientEmail).
 				SetMessage(e.Message).
 				SetNillableTemplateID(e.TemplateID).
@@ -355,8 +361,14 @@ func (s *BackupService) importSharedLinks(ctx context.Context, client *ent.Clien
 				SetViewedIP(e.ViewedIP).
 				SetRevoked(e.Revoked).
 				SetNillableCreateBy(e.CreateBy).
-				SetNillableCreateTime(e.CreateTime).
-				Save(ctx)
+				SetNillableCreateTime(e.CreateTime)
+			if e.EncryptedContent != nil {
+				createBuilder.SetEncryptedContent(*e.EncryptedContent)
+			}
+			if e.EncryptionNonce != nil {
+				createBuilder.SetEncryptionNonce(*e.EncryptionNonce)
+			}
+			_, err := createBuilder.Save(ctx)
 			if err != nil {
 				warnings = append(warnings, fmt.Sprintf("sharedLinks: create %s: %v", e.ID, err))
 				result.Failed++

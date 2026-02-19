@@ -52,9 +52,13 @@ func (SharedLink) Fields() []ent.Field {
 			Comment("Unique share token (64 hex chars)"),
 
 		field.Bytes("encrypted_content").
+			Optional().
+			Nillable().
 			Comment("AES-256-GCM encrypted content"),
 
 		field.Bytes("encryption_nonce").
+			Optional().
+			Nillable().
 			Comment("AES-256-GCM nonce"),
 
 		field.String("recipient_email").

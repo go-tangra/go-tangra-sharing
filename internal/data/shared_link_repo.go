@@ -133,12 +133,14 @@ func (r *SharedLinkRepo) ListByTenant(ctx context.Context, tenantID uint32, reso
 	return entities, total, nil
 }
 
-// MarkViewed marks a shared link as viewed
+// MarkViewed marks a shared link as viewed and clears the encrypted content
 func (r *SharedLinkRepo) MarkViewed(ctx context.Context, id string, viewerIP string) error {
 	now := time.Now()
 	builder := r.entClient.Client().SharedLink.UpdateOneID(id).
 		SetViewed(true).
-		SetViewedAt(now)
+		SetViewedAt(now).
+		ClearEncryptedContent().
+		ClearEncryptionNonce()
 
 	if viewerIP != "" {
 		builder.SetViewedIP(viewerIP)
@@ -152,10 +154,12 @@ func (r *SharedLinkRepo) MarkViewed(ctx context.Context, id string, viewerIP str
 	return nil
 }
 
-// Revoke revokes a shared link
+// Revoke revokes a shared link and clears the encrypted content
 func (r *SharedLinkRepo) Revoke(ctx context.Context, id string) error {
 	_, err := r.entClient.Client().SharedLink.UpdateOneID(id).
 		SetRevoked(true).
+		ClearEncryptedContent().
+		ClearEncryptionNonce().
 		Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {

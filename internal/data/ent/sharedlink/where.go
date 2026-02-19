@@ -654,6 +654,16 @@ func EncryptedContentLTE(v []byte) predicate.SharedLink {
 	return predicate.SharedLink(sql.FieldLTE(FieldEncryptedContent, v))
 }
 
+// EncryptedContentIsNil applies the IsNil predicate on the "encrypted_content" field.
+func EncryptedContentIsNil() predicate.SharedLink {
+	return predicate.SharedLink(sql.FieldIsNull(FieldEncryptedContent))
+}
+
+// EncryptedContentNotNil applies the NotNil predicate on the "encrypted_content" field.
+func EncryptedContentNotNil() predicate.SharedLink {
+	return predicate.SharedLink(sql.FieldNotNull(FieldEncryptedContent))
+}
+
 // EncryptionNonceEQ applies the EQ predicate on the "encryption_nonce" field.
 func EncryptionNonceEQ(v []byte) predicate.SharedLink {
 	return predicate.SharedLink(sql.FieldEQ(FieldEncryptionNonce, v))
@@ -692,6 +702,16 @@ func EncryptionNonceLT(v []byte) predicate.SharedLink {
 // EncryptionNonceLTE applies the LTE predicate on the "encryption_nonce" field.
 func EncryptionNonceLTE(v []byte) predicate.SharedLink {
 	return predicate.SharedLink(sql.FieldLTE(FieldEncryptionNonce, v))
+}
+
+// EncryptionNonceIsNil applies the IsNil predicate on the "encryption_nonce" field.
+func EncryptionNonceIsNil() predicate.SharedLink {
+	return predicate.SharedLink(sql.FieldIsNull(FieldEncryptionNonce))
+}
+
+// EncryptionNonceNotNil applies the NotNil predicate on the "encryption_nonce" field.
+func EncryptionNonceNotNil() predicate.SharedLink {
+	return predicate.SharedLink(sql.FieldNotNull(FieldEncryptionNonce))
 }
 
 // RecipientEmailEQ applies the EQ predicate on the "recipient_email" field.
