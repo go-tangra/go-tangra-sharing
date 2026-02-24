@@ -4,7 +4,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/sharing',
     name: 'Sharing',
-    component: () => import('shell/vben/layouts').then((m) => m.BasicLayout),
+    component: () => import('shell/app-layout'),
     redirect: '/sharing/links',
     meta: {
       order: 2040,
