@@ -6,8 +6,8 @@ buf.build/gen/go/go-tangra/notification/grpc/go v1.6.1-20260311015104-33b6c88955
 buf.build/gen/go/go-tangra/notification/grpc/go v1.6.1-20260311015104-33b6c889557e.1/go.mod h1:NuKkRQwegLPqG7lDAB/XYW6pZC3n+0AuRM9ZB+gub20=
 buf.build/gen/go/go-tangra/notification/protocolbuffers/go v1.36.11-20260311015104-33b6c889557e.1 h1:SFfulKJE5UFPuVsUE2nt9pU0rTgzerw/hOy2eu6c3Qo=
 buf.build/gen/go/go-tangra/notification/protocolbuffers/go v1.36.11-20260311015104-33b6c889557e.1/go.mod h1:NksTEesQfVo3zqqf828X8gIKznovRNSkPDJBNuiMjvw=
-buf.build/gen/go/kratos/apis/protocolbuffers/go v1.36.11-20230105082401-c2de25f14fa4.1 h1:IBwWd3JFh1+FTbOo3hqkaRWV2lNtf5PgO5EeKoKVNRk=
-buf.build/gen/go/kratos/apis/protocolbuffers/go v1.36.11-20230105082401-c2de25f14fa4.1/go.mod h1:gM66M7mY0ODAZlA36ffizVqU3CMJMmy5eKaOlMHeRPo=
+buf.build/gen/go/kratos/apis/protocolbuffers/go v1.36.10-20230105082401-c2de25f14fa4.1 h1:mwnlP1KTH4BXFSty5XsowZmB0eUIp98Uxx5buUmNJ1c=
+buf.build/gen/go/kratos/apis/protocolbuffers/go v1.36.10-20230105082401-c2de25f14fa4.1/go.mod h1:hQZ7isYk0/YE72yMHFS2sUuF+18X6HHtsXtkiTTsaq4=
 buf.build/go/protovalidate v1.1.3 h1:m2GVEgQWd7rk+vIoAZ+f0ygGjvQTuqPQapBBdcpWVPE=
 buf.build/go/protovalidate v1.1.3/go.mod h1:9XIuohWz+kj+9JVn3WQneHA5LZP50mjvneZMnbLkiIE=
 cel.dev/expr v0.25.1 h1:1KrZg61W6TWSxuNZ37Xy49ps13NUovb66QLprthtwi4=
