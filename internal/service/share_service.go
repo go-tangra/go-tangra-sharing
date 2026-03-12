@@ -120,10 +120,9 @@ type ShareService struct {
 	appHost            string
 	rateLimiter        *emailRateLimiter
 
-	// notifTemplateID is resolved once on first email send
-	notifTemplateOnce sync.Once
-	notifTemplateID   string
-	notifTemplateErr  error
+	// notifTemplateID is resolved once on first successful email send
+	notifTemplateMu  sync.Mutex
+	notifTemplateID  string
 }
 
 // NewShareService creates a new ShareService
@@ -444,47 +443,54 @@ func (s *ShareService) ViewSharedContent(ctx context.Context, req *sharingV1.Vie
 }
 
 // ensureNotificationTemplate resolves (or creates) the sharing template in the notification service.
-// Called lazily on first email send. Uses the request context to forward tenant/user metadata.
+// Called lazily on first email send. Uses platform admin context (tenant 0) because notification
+// channels and templates are platform-level resources, not tenant-scoped.
 func (s *ShareService) ensureNotificationTemplate(ctx context.Context) (string, error) {
-	s.notifTemplateOnce.Do(func() {
-		s.log.Info("Resolving notification template for sharing service...")
+	s.notifTemplateMu.Lock()
+	defer s.notifTemplateMu.Unlock()
 
-		// Search for existing template
-		tmpl, err := s.notificationClient.FindTemplateByName(ctx, notificationTemplateName)
-		if err != nil {
-			s.notifTemplateErr = fmt.Errorf("search notification template: %w", err)
-			return
-		}
-		if tmpl != nil {
-			s.notifTemplateID = tmpl.GetId()
-			s.log.Infof("Found existing notification template: %s", s.notifTemplateID)
-			return
-		}
+	// Already resolved successfully — return cached ID
+	if s.notifTemplateID != "" {
+		return s.notifTemplateID, nil
+	}
 
-		// Template not found — find the channel and create the template
-		channelID, err := s.notificationClient.FindChannelByName(ctx, notificationChannelName)
-		if err != nil {
-			s.notifTemplateErr = fmt.Errorf("find channel %q: %w", notificationChannelName, err)
-			return
-		}
+	s.log.Info("Resolving notification template for sharing service...")
 
-		createReq := &notificationv1.CreateTemplateRequest{
-			Name:      notificationTemplateName,
-			ChannelId: channelID,
-			Subject:   defaultSubjectTemplate,
-			Body:      defaultHTMLBodyTemplate,
-			Variables: "SenderName,RecipientEmail,ShareLink,Message,ResourceName,ResourceType",
-			IsDefault: false,
-		}
-		created, err := s.notificationClient.CreateTemplate(ctx, createReq)
-		if err != nil {
-			s.notifTemplateErr = fmt.Errorf("create notification template: %w", err)
-			return
-		}
-		s.notifTemplateID = created.GetId()
-		s.log.Infof("Created notification template: %s", s.notifTemplateID)
-	})
-	return s.notifTemplateID, s.notifTemplateErr
+	// Use platform admin context (tenant 0) to access platform-level notification resources
+	platformCtx := data.DetachedMetadataContext(ctx, 0)
+
+	// Search for existing template
+	tmpl, err := s.notificationClient.FindTemplateByName(platformCtx, notificationTemplateName)
+	if err != nil {
+		return "", fmt.Errorf("search notification template: %w", err)
+	}
+	if tmpl != nil {
+		s.notifTemplateID = tmpl.GetId()
+		s.log.Infof("Found existing notification template: %s", s.notifTemplateID)
+		return s.notifTemplateID, nil
+	}
+
+	// Template not found — find the channel and create the template
+	channelID, err := s.notificationClient.FindChannelByName(platformCtx, notificationChannelName)
+	if err != nil {
+		return "", fmt.Errorf("find channel %q: %w", notificationChannelName, err)
+	}
+
+	createReq := &notificationv1.CreateTemplateRequest{
+		Name:      notificationTemplateName,
+		ChannelId: channelID,
+		Subject:   defaultSubjectTemplate,
+		Body:      defaultHTMLBodyTemplate,
+		Variables: "SenderName,RecipientEmail,ShareLink,Message,ResourceName,ResourceType",
+		IsDefault: false,
+	}
+	created, err := s.notificationClient.CreateTemplate(platformCtx, createReq)
+	if err != nil {
+		return "", fmt.Errorf("create notification template: %w", err)
+	}
+	s.notifTemplateID = created.GetId()
+	s.log.Infof("Created notification template: %s", s.notifTemplateID)
+	return s.notifTemplateID, nil
 }
 
 // sendShareEmail sends the share notification email via the notification service.
@@ -503,7 +509,9 @@ func (s *ShareService) sendShareEmail(ctx context.Context, recipientEmail, sende
 		"ResourceType":   resourceType,
 	}
 
-	_, err = s.notificationClient.SendNotification(ctx, templateID, recipientEmail, variables)
+	// Use platform admin context (tenant 0) for notification service calls
+	platformCtx := data.DetachedMetadataContext(ctx, 0)
+	_, err = s.notificationClient.SendNotification(platformCtx, templateID, recipientEmail, variables)
 	if err != nil {
 		return fmt.Errorf("send notification: %w", err)
 	}
