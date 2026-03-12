@@ -210,26 +210,6 @@ func (_u *SharedLinkUpdate) ClearMessage() *SharedLinkUpdate {
 	return _u
 }
 
-// SetTemplateID sets the "template_id" field.
-func (_u *SharedLinkUpdate) SetTemplateID(v string) *SharedLinkUpdate {
-	_u.mutation.SetTemplateID(v)
-	return _u
-}
-
-// SetNillableTemplateID sets the "template_id" field if the given value is not nil.
-func (_u *SharedLinkUpdate) SetNillableTemplateID(v *string) *SharedLinkUpdate {
-	if v != nil {
-		_u.SetTemplateID(*v)
-	}
-	return _u
-}
-
-// ClearTemplateID clears the value of the "template_id" field.
-func (_u *SharedLinkUpdate) ClearTemplateID() *SharedLinkUpdate {
-	_u.mutation.ClearTemplateID()
-	return _u
-}
-
 // SetViewed sets the "viewed" field.
 func (_u *SharedLinkUpdate) SetViewed(v bool) *SharedLinkUpdate {
 	_u.mutation.SetViewed(v)
@@ -362,11 +342,6 @@ func (_u *SharedLinkUpdate) check() error {
 			return &ValidationError{Name: "message", err: fmt.Errorf(`ent: validator failed for field "SharedLink.message": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.TemplateID(); ok {
-		if err := sharedlink.TemplateIDValidator(v); err != nil {
-			return &ValidationError{Name: "template_id", err: fmt.Errorf(`ent: validator failed for field "SharedLink.template_id": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.ViewedIP(); ok {
 		if err := sharedlink.ViewedIPValidator(v); err != nil {
 			return &ValidationError{Name: "viewed_ip", err: fmt.Errorf(`ent: validator failed for field "SharedLink.viewed_ip": %w`, err)}
@@ -452,12 +427,6 @@ func (_u *SharedLinkUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if _u.mutation.MessageCleared() {
 		_spec.ClearField(sharedlink.FieldMessage, field.TypeString)
-	}
-	if value, ok := _u.mutation.TemplateID(); ok {
-		_spec.SetField(sharedlink.FieldTemplateID, field.TypeString, value)
-	}
-	if _u.mutation.TemplateIDCleared() {
-		_spec.ClearField(sharedlink.FieldTemplateID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Viewed(); ok {
 		_spec.SetField(sharedlink.FieldViewed, field.TypeBool, value)
@@ -680,26 +649,6 @@ func (_u *SharedLinkUpdateOne) ClearMessage() *SharedLinkUpdateOne {
 	return _u
 }
 
-// SetTemplateID sets the "template_id" field.
-func (_u *SharedLinkUpdateOne) SetTemplateID(v string) *SharedLinkUpdateOne {
-	_u.mutation.SetTemplateID(v)
-	return _u
-}
-
-// SetNillableTemplateID sets the "template_id" field if the given value is not nil.
-func (_u *SharedLinkUpdateOne) SetNillableTemplateID(v *string) *SharedLinkUpdateOne {
-	if v != nil {
-		_u.SetTemplateID(*v)
-	}
-	return _u
-}
-
-// ClearTemplateID clears the value of the "template_id" field.
-func (_u *SharedLinkUpdateOne) ClearTemplateID() *SharedLinkUpdateOne {
-	_u.mutation.ClearTemplateID()
-	return _u
-}
-
 // SetViewed sets the "viewed" field.
 func (_u *SharedLinkUpdateOne) SetViewed(v bool) *SharedLinkUpdateOne {
 	_u.mutation.SetViewed(v)
@@ -845,11 +794,6 @@ func (_u *SharedLinkUpdateOne) check() error {
 			return &ValidationError{Name: "message", err: fmt.Errorf(`ent: validator failed for field "SharedLink.message": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.TemplateID(); ok {
-		if err := sharedlink.TemplateIDValidator(v); err != nil {
-			return &ValidationError{Name: "template_id", err: fmt.Errorf(`ent: validator failed for field "SharedLink.template_id": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.ViewedIP(); ok {
 		if err := sharedlink.ViewedIPValidator(v); err != nil {
 			return &ValidationError{Name: "viewed_ip", err: fmt.Errorf(`ent: validator failed for field "SharedLink.viewed_ip": %w`, err)}
@@ -952,12 +896,6 @@ func (_u *SharedLinkUpdateOne) sqlSave(ctx context.Context) (_node *SharedLink, 
 	}
 	if _u.mutation.MessageCleared() {
 		_spec.ClearField(sharedlink.FieldMessage, field.TypeString)
-	}
-	if value, ok := _u.mutation.TemplateID(); ok {
-		_spec.SetField(sharedlink.FieldTemplateID, field.TypeString, value)
-	}
-	if _u.mutation.TemplateIDCleared() {
-		_spec.ClearField(sharedlink.FieldTemplateID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Viewed(); ok {
 		_spec.SetField(sharedlink.FieldViewed, field.TypeBool, value)

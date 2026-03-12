@@ -78,83 +78,6 @@ paths:
         '200':
           description: Share revoked
 
-  /v1/templates:
-    post:
-      summary: Create an email template
-      operationId: CreateTemplate
-      tags: [Templates]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateTemplateRequest'
-      responses:
-        '200':
-          description: Template created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateTemplateResponse'
-    get:
-      summary: List email templates
-      operationId: ListTemplates
-      tags: [Templates]
-      responses:
-        '200':
-          description: List of templates
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListTemplatesResponse'
-
-  /v1/templates/{id}:
-    get:
-      summary: Get a template
-      operationId: GetTemplate
-      tags: [Templates]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        '200':
-          description: Template details
-    put:
-      summary: Update a template
-      operationId: UpdateTemplate
-      tags: [Templates]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        '200':
-          description: Template updated
-    delete:
-      summary: Delete a template
-      operationId: DeleteTemplate
-      tags: [Templates]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        '200':
-          description: Template deleted
-
-  /v1/templates/preview:
-    post:
-      summary: Preview a template with sample data
-      operationId: PreviewTemplate
-      tags: [Templates]
-      responses:
-        '200':
-          description: Rendered template
-
 components:
   schemas:
     CreateShareRequest:
@@ -165,7 +88,6 @@ components:
         resourceId: { type: string }
         recipientEmail: { type: string }
         message: { type: string }
-        templateId: { type: string }
 
     CreateShareResponse:
       type: object
@@ -204,40 +126,3 @@ components:
         createdBy: { type: integer }
         createTime: { type: string, format: date-time }
 
-    CreateTemplateRequest:
-      type: object
-      required: [name, subject, htmlBody]
-      properties:
-        name: { type: string }
-        subject: { type: string }
-        htmlBody: { type: string }
-        isDefault: { type: boolean }
-
-    CreateTemplateResponse:
-      type: object
-      properties:
-        template:
-          $ref: '#/components/schemas/EmailTemplate'
-
-    ListTemplatesResponse:
-      type: object
-      properties:
-        templates:
-          type: array
-          items:
-            $ref: '#/components/schemas/EmailTemplate'
-        total: { type: integer }
-
-    EmailTemplate:
-      type: object
-      properties:
-        id: { type: string }
-        tenantId: { type: integer }
-        name: { type: string }
-        subject: { type: string }
-        htmlBody: { type: string }
-        isDefault: { type: boolean }
-        createdBy: { type: integer }
-        updatedBy: { type: integer }
-        createTime: { type: string, format: date-time }
-        updateTime: { type: string, format: date-time }

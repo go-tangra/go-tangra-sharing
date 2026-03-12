@@ -44,8 +44,6 @@ type SharedLink struct {
 	RecipientEmail string `json:"recipient_email,omitempty"`
 	// Optional message to recipient
 	Message string `json:"message,omitempty"`
-	// Email template ID used
-	TemplateID *string `json:"template_id,omitempty"`
 	// Whether the share has been viewed
 	Viewed bool `json:"viewed,omitempty"`
 	// When the share was viewed
@@ -68,7 +66,7 @@ func (*SharedLink) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case sharedlink.FieldCreateBy, sharedlink.FieldTenantID:
 			values[i] = new(sql.NullInt64)
-		case sharedlink.FieldID, sharedlink.FieldResourceType, sharedlink.FieldResourceID, sharedlink.FieldResourceName, sharedlink.FieldToken, sharedlink.FieldRecipientEmail, sharedlink.FieldMessage, sharedlink.FieldTemplateID, sharedlink.FieldViewedIP:
+		case sharedlink.FieldID, sharedlink.FieldResourceType, sharedlink.FieldResourceID, sharedlink.FieldResourceName, sharedlink.FieldToken, sharedlink.FieldRecipientEmail, sharedlink.FieldMessage, sharedlink.FieldViewedIP:
 			values[i] = new(sql.NullString)
 		case sharedlink.FieldCreateTime, sharedlink.FieldUpdateTime, sharedlink.FieldDeleteTime, sharedlink.FieldViewedAt:
 			values[i] = new(sql.NullTime)
@@ -175,13 +173,6 @@ func (_m *SharedLink) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field message", values[i])
 			} else if value.Valid {
 				_m.Message = value.String
-			}
-		case sharedlink.FieldTemplateID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field template_id", values[i])
-			} else if value.Valid {
-				_m.TemplateID = new(string)
-				*_m.TemplateID = value.String
 			}
 		case sharedlink.FieldViewed:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -296,11 +287,6 @@ func (_m *SharedLink) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("message=")
 	builder.WriteString(_m.Message)
-	builder.WriteString(", ")
-	if v := _m.TemplateID; v != nil {
-		builder.WriteString("template_id=")
-		builder.WriteString(*v)
-	}
 	builder.WriteString(", ")
 	builder.WriteString("viewed=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Viewed))

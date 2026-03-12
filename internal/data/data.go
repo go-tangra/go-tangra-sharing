@@ -7,8 +7,6 @@ import (
 
 	"github.com/tx7do/kratos-bootstrap/bootstrap"
 	redisClient "github.com/tx7do/kratos-bootstrap/cache/redis"
-
-	"github.com/go-tangra/go-tangra-sharing/pkg/mail"
 )
 
 // NewRedisClient creates a Redis client
@@ -27,12 +25,6 @@ func NewRedisClient(ctx *bootstrap.Context) (*redis.Client, func(), error) {
 			l.Error(err)
 		}
 	}, nil
-}
-
-// NewMailSender creates an SMTP mail sender
-func NewMailSender() *mail.Sender {
-	config := mail.NewSMTPConfigFromEnv()
-	return mail.NewSender(config)
 }
 
 // getEnvOrDefault gets an environment variable or returns a default value

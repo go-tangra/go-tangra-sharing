@@ -71,12 +71,6 @@ func (SharedLink) Fields() []ent.Field {
 			MaxLen(2048).
 			Comment("Optional message to recipient"),
 
-		field.String("template_id").
-			Optional().
-			Nillable().
-			MaxLen(36).
-			Comment("Email template ID used"),
-
 		field.Bool("viewed").
 			Default(false).
 			Comment("Whether the share has been viewed"),

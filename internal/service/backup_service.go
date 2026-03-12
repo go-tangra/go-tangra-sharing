@@ -16,9 +16,8 @@ import (
 
 	sharingV1 "github.com/go-tangra/go-tangra-sharing/gen/go/sharing/service/v1"
 	"github.com/go-tangra/go-tangra-sharing/internal/data/ent"
-	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/emailtemplate"
-	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/sharepolicy"
 	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/sharedlink"
+	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/sharepolicy"
 )
 
 const (
@@ -41,18 +40,17 @@ func NewBackupService(ctx *bootstrap.Context, entClient *entCrud.EntClient[*ent.
 }
 
 type backupData struct {
-	Module     string          `json:"module"`
-	Version    string          `json:"version"`
-	ExportedAt time.Time       `json:"exportedAt"`
-	TenantID   uint32          `json:"tenantId"`
-	FullBackup bool            `json:"fullBackup"`
-	Data       backupEntities  `json:"data"`
+	Module     string         `json:"module"`
+	Version    string         `json:"version"`
+	ExportedAt time.Time      `json:"exportedAt"`
+	TenantID   uint32         `json:"tenantId"`
+	FullBackup bool           `json:"fullBackup"`
+	Data       backupEntities `json:"data"`
 }
 
 type backupEntities struct {
-	EmailTemplates []json.RawMessage `json:"emailTemplates,omitempty"`
-	SharedLinks    []json.RawMessage `json:"sharedLinks,omitempty"`
-	SharePolicies  []json.RawMessage `json:"sharePolicies,omitempty"`
+	SharedLinks   []json.RawMessage `json:"sharedLinks,omitempty"`
+	SharePolicies []json.RawMessage `json:"sharePolicies,omitempty"`
 }
 
 func marshalEntities[T any](entities []*T) ([]json.RawMessage, error) {
@@ -68,25 +66,24 @@ func marshalEntities[T any](entities []*T) ([]json.RawMessage, error) {
 }
 
 func (s *BackupService) ExportBackup(ctx context.Context, req *sharingV1.ExportBackupRequest) (*sharingV1.ExportBackupResponse, error) {
+	// Only platform admins can export backups
+	if !grpcx.IsPlatformAdmin(ctx) {
+		return nil, fmt.Errorf("only platform admins can export backups")
+	}
+
 	tenantID := grpcx.GetTenantIDFromContext(ctx)
 	full := false
 
-	if grpcx.IsPlatformAdmin(ctx) && req.TenantId != nil && *req.TenantId == 0 {
+	if req.TenantId != nil && *req.TenantId == 0 {
 		full = true
 		tenantID = 0
 	} else if req.TenantId != nil && *req.TenantId != 0 {
-		if grpcx.IsPlatformAdmin(ctx) {
-			tenantID = *req.TenantId
-		}
+		tenantID = *req.TenantId
 	}
 
 	client := s.entClient.Client()
 	now := time.Now()
 
-	templates, err := s.exportEmailTemplates(ctx, client, tenantID, full)
-	if err != nil {
-		return nil, fmt.Errorf("export email templates: %w", err)
-	}
 	links, err := s.exportSharedLinks(ctx, client, tenantID, full)
 	if err != nil {
 		return nil, fmt.Errorf("export shared links: %w", err)
@@ -103,9 +100,8 @@ func (s *BackupService) ExportBackup(ctx context.Context, req *sharingV1.ExportB
 		TenantID:   tenantID,
 		FullBackup: full,
 		Data: backupEntities{
-			EmailTemplates: templates,
-			SharedLinks:    links,
-			SharePolicies:  policies,
+			SharedLinks:   links,
+			SharePolicies: policies,
 		},
 	}
 
@@ -115,9 +111,8 @@ func (s *BackupService) ExportBackup(ctx context.Context, req *sharingV1.ExportB
 	}
 
 	entityCounts := map[string]int64{
-		"emailTemplates": int64(len(templates)),
-		"sharedLinks":    int64(len(links)),
-		"sharePolicies":  int64(len(policies)),
+		"sharedLinks":   int64(len(links)),
+		"sharePolicies": int64(len(policies)),
 	}
 
 	s.log.Infof("exported backup: module=%s tenant=%d full=%v entities=%v", backupModule, tenantID, full, entityCounts)
@@ -133,8 +128,12 @@ func (s *BackupService) ExportBackup(ctx context.Context, req *sharingV1.ExportB
 }
 
 func (s *BackupService) ImportBackup(ctx context.Context, req *sharingV1.ImportBackupRequest) (*sharingV1.ImportBackupResponse, error) {
+	// Only platform admins can import backups
+	if !grpcx.IsPlatformAdmin(ctx) {
+		return nil, fmt.Errorf("only platform admins can import backups")
+	}
+
 	tenantID := grpcx.GetTenantIDFromContext(ctx)
-	isPlatformAdmin := grpcx.IsPlatformAdmin(ctx)
 	mode := req.GetMode()
 
 	var backup backupData
@@ -149,13 +148,7 @@ func (s *BackupService) ImportBackup(ctx context.Context, req *sharingV1.ImportB
 		return nil, fmt.Errorf("backup version mismatch: expected %s, got %s", backupVersion, backup.Version)
 	}
 
-	if backup.FullBackup && !isPlatformAdmin {
-		return nil, fmt.Errorf("only platform admins can restore full backups")
-	}
-
-	if !isPlatformAdmin || !backup.FullBackup {
-		tenantID = grpcx.GetTenantIDFromContext(ctx)
-	} else {
+	if backup.FullBackup {
 		tenantID = 0
 	}
 
@@ -168,7 +161,6 @@ func (s *BackupService) ImportBackup(ctx context.Context, req *sharingV1.ImportB
 		items []json.RawMessage
 		fn    func(context.Context, *ent.Client, []json.RawMessage, uint32, bool, sharingV1.RestoreMode) (*sharingV1.EntityImportResult, []string)
 	}{
-		{"emailTemplates", backup.Data.EmailTemplates, s.importEmailTemplates},
 		{"sharedLinks", backup.Data.SharedLinks, s.importSharedLinks},
 		{"sharePolicies", backup.Data.SharePolicies, s.importSharePolicies},
 	}
@@ -194,18 +186,6 @@ func (s *BackupService) ImportBackup(ctx context.Context, req *sharingV1.ImportB
 }
 
 // --- Export helpers ---
-
-func (s *BackupService) exportEmailTemplates(ctx context.Context, client *ent.Client, tenantID uint32, full bool) ([]json.RawMessage, error) {
-	query := client.EmailTemplate.Query()
-	if !full {
-		query = query.Where(emailtemplate.TenantID(tenantID))
-	}
-	entities, err := query.All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return marshalEntities(entities)
-}
 
 func (s *BackupService) exportSharedLinks(ctx context.Context, client *ent.Client, tenantID uint32, full bool) ([]json.RawMessage, error) {
 	query := client.SharedLink.Query()
@@ -233,65 +213,6 @@ func (s *BackupService) exportSharePolicies(ctx context.Context, client *ent.Cli
 
 // --- Import helpers ---
 
-func (s *BackupService) importEmailTemplates(ctx context.Context, client *ent.Client, items []json.RawMessage, tenantID uint32, full bool, mode sharingV1.RestoreMode) (*sharingV1.EntityImportResult, []string) {
-	result := &sharingV1.EntityImportResult{EntityType: "emailTemplates", Total: int64(len(items))}
-	var warnings []string
-
-	for _, raw := range items {
-		var e ent.EmailTemplate
-		if err := json.Unmarshal(raw, &e); err != nil {
-			warnings = append(warnings, fmt.Sprintf("emailTemplates: unmarshal error: %v", err))
-			result.Failed++
-			continue
-		}
-
-		tid := tenantID
-		if full && e.TenantID != nil {
-			tid = *e.TenantID
-		}
-
-		existing, _ := client.EmailTemplate.Get(ctx, e.ID)
-		if existing != nil {
-			if mode == sharingV1.RestoreMode_RESTORE_MODE_SKIP {
-				result.Skipped++
-				continue
-			}
-			_, err := client.EmailTemplate.UpdateOneID(e.ID).
-				SetName(e.Name).
-				SetSubject(e.Subject).
-				SetHTMLBody(e.HTMLBody).
-				SetIsDefault(e.IsDefault).
-				SetNillableCreateBy(e.CreateBy).
-				Save(ctx)
-			if err != nil {
-				warnings = append(warnings, fmt.Sprintf("emailTemplates: update %s: %v", e.ID, err))
-				result.Failed++
-				continue
-			}
-			result.Updated++
-		} else {
-			_, err := client.EmailTemplate.Create().
-				SetID(e.ID).
-				SetNillableTenantID(&tid).
-				SetName(e.Name).
-				SetSubject(e.Subject).
-				SetHTMLBody(e.HTMLBody).
-				SetIsDefault(e.IsDefault).
-				SetNillableCreateBy(e.CreateBy).
-				SetNillableCreateTime(e.CreateTime).
-				Save(ctx)
-			if err != nil {
-				warnings = append(warnings, fmt.Sprintf("emailTemplates: create %s: %v", e.ID, err))
-				result.Failed++
-				continue
-			}
-			result.Created++
-		}
-	}
-
-	return result, warnings
-}
-
 func (s *BackupService) importSharedLinks(ctx context.Context, client *ent.Client, items []json.RawMessage, tenantID uint32, full bool, mode sharingV1.RestoreMode) (*sharingV1.EntityImportResult, []string) {
 	result := &sharingV1.EntityImportResult{EntityType: "sharedLinks", Total: int64(len(items))}
 	var warnings []string
@@ -315,6 +236,12 @@ func (s *BackupService) importSharedLinks(ctx context.Context, client *ent.Clien
 				result.Skipped++
 				continue
 			}
+			// Never allow resurrection of viewed or revoked shares
+			if existing.Viewed || existing.Revoked {
+				warnings = append(warnings, fmt.Sprintf("sharedLinks: skip %s: cannot overwrite viewed/revoked share", e.ID))
+				result.Skipped++
+				continue
+			}
 			builder := client.SharedLink.UpdateOneID(e.ID).
 				SetResourceType(e.ResourceType).
 				SetResourceID(e.ResourceID).
@@ -322,7 +249,7 @@ func (s *BackupService) importSharedLinks(ctx context.Context, client *ent.Clien
 				SetToken(e.Token).
 				SetRecipientEmail(e.RecipientEmail).
 				SetMessage(e.Message).
-				SetNillableTemplateID(e.TemplateID).
+
 				SetViewed(e.Viewed).
 				SetNillableViewedAt(e.ViewedAt).
 				SetViewedIP(e.ViewedIP).
@@ -346,6 +273,14 @@ func (s *BackupService) importSharedLinks(ctx context.Context, client *ent.Clien
 			}
 			result.Updated++
 		} else {
+			// For new creates, strip ciphertext from viewed/revoked shares
+			hasContent := e.EncryptedContent != nil
+			hasNonce := e.EncryptionNonce != nil
+			if e.Viewed || e.Revoked {
+				hasContent = false
+				hasNonce = false
+			}
+
 			createBuilder := client.SharedLink.Create().
 				SetID(e.ID).
 				SetNillableTenantID(&tid).
@@ -355,17 +290,17 @@ func (s *BackupService) importSharedLinks(ctx context.Context, client *ent.Clien
 				SetToken(e.Token).
 				SetRecipientEmail(e.RecipientEmail).
 				SetMessage(e.Message).
-				SetNillableTemplateID(e.TemplateID).
+
 				SetViewed(e.Viewed).
 				SetNillableViewedAt(e.ViewedAt).
 				SetViewedIP(e.ViewedIP).
 				SetRevoked(e.Revoked).
 				SetNillableCreateBy(e.CreateBy).
 				SetNillableCreateTime(e.CreateTime)
-			if e.EncryptedContent != nil {
+			if hasContent {
 				createBuilder.SetEncryptedContent(*e.EncryptedContent)
 			}
-			if e.EncryptionNonce != nil {
+			if hasNonce {
 				createBuilder.SetEncryptionNonce(*e.EncryptionNonce)
 			}
 			_, err := createBuilder.Save(ctx)

@@ -124,11 +124,6 @@ func Message(v string) predicate.SharedLink {
 	return predicate.SharedLink(sql.FieldEQ(FieldMessage, v))
 }
 
-// TemplateID applies equality check predicate on the "template_id" field. It's identical to TemplateIDEQ.
-func TemplateID(v string) predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldEQ(FieldTemplateID, v))
-}
-
 // Viewed applies equality check predicate on the "viewed" field. It's identical to ViewedEQ.
 func Viewed(v bool) predicate.SharedLink {
 	return predicate.SharedLink(sql.FieldEQ(FieldViewed, v))
@@ -852,81 +847,6 @@ func MessageEqualFold(v string) predicate.SharedLink {
 // MessageContainsFold applies the ContainsFold predicate on the "message" field.
 func MessageContainsFold(v string) predicate.SharedLink {
 	return predicate.SharedLink(sql.FieldContainsFold(FieldMessage, v))
-}
-
-// TemplateIDEQ applies the EQ predicate on the "template_id" field.
-func TemplateIDEQ(v string) predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldEQ(FieldTemplateID, v))
-}
-
-// TemplateIDNEQ applies the NEQ predicate on the "template_id" field.
-func TemplateIDNEQ(v string) predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldNEQ(FieldTemplateID, v))
-}
-
-// TemplateIDIn applies the In predicate on the "template_id" field.
-func TemplateIDIn(vs ...string) predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldIn(FieldTemplateID, vs...))
-}
-
-// TemplateIDNotIn applies the NotIn predicate on the "template_id" field.
-func TemplateIDNotIn(vs ...string) predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldNotIn(FieldTemplateID, vs...))
-}
-
-// TemplateIDGT applies the GT predicate on the "template_id" field.
-func TemplateIDGT(v string) predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldGT(FieldTemplateID, v))
-}
-
-// TemplateIDGTE applies the GTE predicate on the "template_id" field.
-func TemplateIDGTE(v string) predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldGTE(FieldTemplateID, v))
-}
-
-// TemplateIDLT applies the LT predicate on the "template_id" field.
-func TemplateIDLT(v string) predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldLT(FieldTemplateID, v))
-}
-
-// TemplateIDLTE applies the LTE predicate on the "template_id" field.
-func TemplateIDLTE(v string) predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldLTE(FieldTemplateID, v))
-}
-
-// TemplateIDContains applies the Contains predicate on the "template_id" field.
-func TemplateIDContains(v string) predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldContains(FieldTemplateID, v))
-}
-
-// TemplateIDHasPrefix applies the HasPrefix predicate on the "template_id" field.
-func TemplateIDHasPrefix(v string) predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldHasPrefix(FieldTemplateID, v))
-}
-
-// TemplateIDHasSuffix applies the HasSuffix predicate on the "template_id" field.
-func TemplateIDHasSuffix(v string) predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldHasSuffix(FieldTemplateID, v))
-}
-
-// TemplateIDIsNil applies the IsNil predicate on the "template_id" field.
-func TemplateIDIsNil() predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldIsNull(FieldTemplateID))
-}
-
-// TemplateIDNotNil applies the NotNil predicate on the "template_id" field.
-func TemplateIDNotNil() predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldNotNull(FieldTemplateID))
-}
-
-// TemplateIDEqualFold applies the EqualFold predicate on the "template_id" field.
-func TemplateIDEqualFold(v string) predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldEqualFold(FieldTemplateID, v))
-}
-
-// TemplateIDContainsFold applies the ContainsFold predicate on the "template_id" field.
-func TemplateIDContainsFold(v string) predicate.SharedLink {
-	return predicate.SharedLink(sql.FieldContainsFold(FieldTemplateID, v))
 }
 
 // ViewedEQ applies the EQ predicate on the "viewed" field.

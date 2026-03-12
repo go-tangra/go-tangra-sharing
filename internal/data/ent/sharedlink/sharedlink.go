@@ -40,8 +40,6 @@ const (
 	FieldRecipientEmail = "recipient_email"
 	// FieldMessage holds the string denoting the message field in the database.
 	FieldMessage = "message"
-	// FieldTemplateID holds the string denoting the template_id field in the database.
-	FieldTemplateID = "template_id"
 	// FieldViewed holds the string denoting the viewed field in the database.
 	FieldViewed = "viewed"
 	// FieldViewedAt holds the string denoting the viewed_at field in the database.
@@ -70,7 +68,6 @@ var Columns = []string{
 	FieldEncryptionNonce,
 	FieldRecipientEmail,
 	FieldMessage,
-	FieldTemplateID,
 	FieldViewed,
 	FieldViewedAt,
 	FieldViewedIP,
@@ -107,8 +104,6 @@ var (
 	RecipientEmailValidator func(string) error
 	// MessageValidator is a validator for the "message" field. It is called by the builders before save.
 	MessageValidator func(string) error
-	// TemplateIDValidator is a validator for the "template_id" field. It is called by the builders before save.
-	TemplateIDValidator func(string) error
 	// DefaultViewed holds the default value on creation for the "viewed" field.
 	DefaultViewed bool
 	// ViewedIPValidator is a validator for the "viewed_ip" field. It is called by the builders before save.
@@ -203,11 +198,6 @@ func ByRecipientEmail(opts ...sql.OrderTermOption) OrderOption {
 // ByMessage orders the results by the message field.
 func ByMessage(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMessage, opts...).ToFunc()
-}
-
-// ByTemplateID orders the results by the template_id field.
-func ByTemplateID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldTemplateID, opts...).ToFunc()
 }
 
 // ByViewed orders the results by the viewed field.

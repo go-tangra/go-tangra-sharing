@@ -14,7 +14,6 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
-	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/emailtemplate"
 	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/sharedlink"
 	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/sharepolicy"
 )
@@ -24,8 +23,6 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
-	// EmailTemplate is the client for interacting with the EmailTemplate builders.
-	EmailTemplate *EmailTemplateClient
 	// SharePolicy is the client for interacting with the SharePolicy builders.
 	SharePolicy *SharePolicyClient
 	// SharedLink is the client for interacting with the SharedLink builders.
@@ -41,7 +38,6 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
-	c.EmailTemplate = NewEmailTemplateClient(c.config)
 	c.SharePolicy = NewSharePolicyClient(c.config)
 	c.SharedLink = NewSharedLinkClient(c.config)
 }
@@ -134,11 +130,10 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:           ctx,
-		config:        cfg,
-		EmailTemplate: NewEmailTemplateClient(cfg),
-		SharePolicy:   NewSharePolicyClient(cfg),
-		SharedLink:    NewSharedLinkClient(cfg),
+		ctx:         ctx,
+		config:      cfg,
+		SharePolicy: NewSharePolicyClient(cfg),
+		SharedLink:  NewSharedLinkClient(cfg),
 	}, nil
 }
 
@@ -156,18 +151,17 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:           ctx,
-		config:        cfg,
-		EmailTemplate: NewEmailTemplateClient(cfg),
-		SharePolicy:   NewSharePolicyClient(cfg),
-		SharedLink:    NewSharedLinkClient(cfg),
+		ctx:         ctx,
+		config:      cfg,
+		SharePolicy: NewSharePolicyClient(cfg),
+		SharedLink:  NewSharedLinkClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		EmailTemplate.
+//		SharePolicy.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -189,7 +183,6 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
-	c.EmailTemplate.Use(hooks...)
 	c.SharePolicy.Use(hooks...)
 	c.SharedLink.Use(hooks...)
 }
@@ -197,7 +190,6 @@ func (c *Client) Use(hooks ...Hook) {
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
-	c.EmailTemplate.Intercept(interceptors...)
 	c.SharePolicy.Intercept(interceptors...)
 	c.SharedLink.Intercept(interceptors...)
 }
@@ -205,148 +197,12 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
-	case *EmailTemplateMutation:
-		return c.EmailTemplate.mutate(ctx, m)
 	case *SharePolicyMutation:
 		return c.SharePolicy.mutate(ctx, m)
 	case *SharedLinkMutation:
 		return c.SharedLink.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
-	}
-}
-
-// EmailTemplateClient is a client for the EmailTemplate schema.
-type EmailTemplateClient struct {
-	config
-}
-
-// NewEmailTemplateClient returns a client for the EmailTemplate from the given config.
-func NewEmailTemplateClient(c config) *EmailTemplateClient {
-	return &EmailTemplateClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `emailtemplate.Hooks(f(g(h())))`.
-func (c *EmailTemplateClient) Use(hooks ...Hook) {
-	c.hooks.EmailTemplate = append(c.hooks.EmailTemplate, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `emailtemplate.Intercept(f(g(h())))`.
-func (c *EmailTemplateClient) Intercept(interceptors ...Interceptor) {
-	c.inters.EmailTemplate = append(c.inters.EmailTemplate, interceptors...)
-}
-
-// Create returns a builder for creating a EmailTemplate entity.
-func (c *EmailTemplateClient) Create() *EmailTemplateCreate {
-	mutation := newEmailTemplateMutation(c.config, OpCreate)
-	return &EmailTemplateCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of EmailTemplate entities.
-func (c *EmailTemplateClient) CreateBulk(builders ...*EmailTemplateCreate) *EmailTemplateCreateBulk {
-	return &EmailTemplateCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *EmailTemplateClient) MapCreateBulk(slice any, setFunc func(*EmailTemplateCreate, int)) *EmailTemplateCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &EmailTemplateCreateBulk{err: fmt.Errorf("calling to EmailTemplateClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*EmailTemplateCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &EmailTemplateCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for EmailTemplate.
-func (c *EmailTemplateClient) Update() *EmailTemplateUpdate {
-	mutation := newEmailTemplateMutation(c.config, OpUpdate)
-	return &EmailTemplateUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *EmailTemplateClient) UpdateOne(_m *EmailTemplate) *EmailTemplateUpdateOne {
-	mutation := newEmailTemplateMutation(c.config, OpUpdateOne, withEmailTemplate(_m))
-	return &EmailTemplateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *EmailTemplateClient) UpdateOneID(id string) *EmailTemplateUpdateOne {
-	mutation := newEmailTemplateMutation(c.config, OpUpdateOne, withEmailTemplateID(id))
-	return &EmailTemplateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for EmailTemplate.
-func (c *EmailTemplateClient) Delete() *EmailTemplateDelete {
-	mutation := newEmailTemplateMutation(c.config, OpDelete)
-	return &EmailTemplateDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *EmailTemplateClient) DeleteOne(_m *EmailTemplate) *EmailTemplateDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *EmailTemplateClient) DeleteOneID(id string) *EmailTemplateDeleteOne {
-	builder := c.Delete().Where(emailtemplate.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &EmailTemplateDeleteOne{builder}
-}
-
-// Query returns a query builder for EmailTemplate.
-func (c *EmailTemplateClient) Query() *EmailTemplateQuery {
-	return &EmailTemplateQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeEmailTemplate},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a EmailTemplate entity by its id.
-func (c *EmailTemplateClient) Get(ctx context.Context, id string) (*EmailTemplate, error) {
-	return c.Query().Where(emailtemplate.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *EmailTemplateClient) GetX(ctx context.Context, id string) *EmailTemplate {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// Hooks returns the client hooks.
-func (c *EmailTemplateClient) Hooks() []Hook {
-	hooks := c.hooks.EmailTemplate
-	return append(hooks[:len(hooks):len(hooks)], emailtemplate.Hooks[:]...)
-}
-
-// Interceptors returns the client interceptors.
-func (c *EmailTemplateClient) Interceptors() []Interceptor {
-	return c.inters.EmailTemplate
-}
-
-func (c *EmailTemplateClient) mutate(ctx context.Context, m *EmailTemplateMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&EmailTemplateCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&EmailTemplateUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&EmailTemplateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&EmailTemplateDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown EmailTemplate mutation op: %q", m.Op())
 	}
 }
 
@@ -621,9 +477,9 @@ func (c *SharedLinkClient) mutate(ctx context.Context, m *SharedLinkMutation) (V
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		EmailTemplate, SharePolicy, SharedLink []ent.Hook
+		SharePolicy, SharedLink []ent.Hook
 	}
 	inters struct {
-		EmailTemplate, SharePolicy, SharedLink []ent.Interceptor
+		SharePolicy, SharedLink []ent.Interceptor
 	}
 )

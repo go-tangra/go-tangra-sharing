@@ -9,18 +9,6 @@ import (
 	"github.com/go-tangra/go-tangra-sharing/internal/data/ent"
 )
 
-// The EmailTemplateFunc type is an adapter to allow the use of ordinary
-// function as EmailTemplate mutator.
-type EmailTemplateFunc func(context.Context, *ent.EmailTemplateMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f EmailTemplateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.EmailTemplateMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EmailTemplateMutation", m)
-}
-
 // The SharePolicyFunc type is an adapter to allow the use of ordinary
 // function as SharePolicy mutator.
 type SharePolicyFunc func(context.Context, *ent.SharePolicyMutation) (ent.Value, error)

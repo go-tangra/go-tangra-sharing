@@ -31,18 +31,6 @@ menus:
       - platform:admin
       - tenant:manager
 
-  - id: sharing-templates
-    parent_id: sharing
-    type: MENU
-    name: Email Templates
-    path: templates
-    component: app/sharing/templates/index.vue
-    icon: lucide:mail
-    order: 2
-    authority:
-      - platform:admin
-      - tenant:manager
-
 permission_groups:
   - name: Sharing
     module: sharing
@@ -57,9 +45,6 @@ permission_groups:
       - name: Revoke Shares
         code: sharing.share.revoke
         description: Revoke shared links
-      - name: Manage Templates
-        code: sharing.template.manage
-        description: Create, update, and delete email templates
 
 roles:
   - name: Sharing Administrator
@@ -70,7 +55,6 @@ roles:
       - sharing.share.view
       - sharing.share.create
       - sharing.share.revoke
-      - sharing.template.manage
 
   - name: Sharing Operator
     code: sharing.operator

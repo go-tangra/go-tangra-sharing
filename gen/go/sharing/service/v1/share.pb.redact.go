@@ -208,8 +208,6 @@ func (x *CreateShareRequest) Redact() string {
 
 	// Safe field: Message
 
-	// Safe field: TemplateId
-
 	// Safe field: Policies
 	return x.String()
 }

@@ -73,6 +73,21 @@ func (r *SharePolicyRepo) ListByShareLinkID(ctx context.Context, shareLinkID str
 	return entities, nil
 }
 
+// GetByID retrieves a share policy by ID
+func (r *SharePolicyRepo) GetByID(ctx context.Context, id string) (*ent.SharePolicy, error) {
+	entity, err := r.entClient.Client().SharePolicy.Query().
+		Where(sharepolicy.IDEQ(id)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil
+		}
+		r.log.Errorf("get share policy failed: %s", err.Error())
+		return nil, sharingV1.ErrorInternalServerError("get share policy failed")
+	}
+	return entity, nil
+}
+
 // Delete deletes a share policy by ID
 func (r *SharePolicyRepo) Delete(ctx context.Context, id string) error {
 	err := r.entClient.Client().SharePolicy.DeleteOneID(id).Exec(ctx)

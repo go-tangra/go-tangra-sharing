@@ -2,9 +2,11 @@ package server
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -71,8 +73,8 @@ func handleViewShared(shareSvc *service.ShareService) kratosHttp.HandlerFunc {
 		setCORSHeaders(ctx)
 
 		token := ctx.Vars().Get("token")
-		if token == "" {
-			return ctx.JSON(http.StatusBadRequest, errorResponse("token is required"))
+		if !isValidToken(token) {
+			return ctx.JSON(http.StatusBadRequest, errorResponse("invalid token"))
 		}
 
 		// Extract viewer IP
@@ -119,8 +121,8 @@ func handleDownloadShared(shareSvc *service.ShareService) kratosHttp.HandlerFunc
 		setCORSHeaders(ctx)
 
 		token := ctx.Vars().Get("token")
-		if token == "" {
-			return ctx.JSON(http.StatusBadRequest, errorResponse("token is required"))
+		if !isValidToken(token) {
+			return ctx.JSON(http.StatusBadRequest, errorResponse("invalid token"))
 		}
 
 		// Extract viewer IP
@@ -158,7 +160,7 @@ func handleDownloadShared(shareSvc *service.ShareService) kratosHttp.HandlerFunc
 
 			w := ctx.Response()
 			w.Header().Set("Content-Type", mimeType)
-			w.Header().Set("Content-Disposition", "attachment; filename=\""+fileName+"\"")
+			w.Header().Set("Content-Disposition", "attachment; filename*=UTF-8''"+url.PathEscape(fileName))
 			w.WriteHeader(http.StatusOK)
 			_, writeErr := w.Write(resp.FileContent)
 			return writeErr
@@ -206,6 +208,15 @@ func mapShareError(err error) (int, string) {
 
 func errorResponse(msg string) map[string]string {
 	return map[string]string{"error": msg}
+}
+
+// isValidToken checks that a token is exactly 64 hex characters.
+func isValidToken(token string) bool {
+	if len(token) != 64 {
+		return false
+	}
+	_, err := hex.DecodeString(token)
+	return err == nil
 }
 
 // Ensure json is used (silence import)

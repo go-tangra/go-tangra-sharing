@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"time"
 
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/transport/grpc"
@@ -29,23 +28,24 @@ func newApp(
 	ctx *bootstrap.Context,
 	gs *grpc.Server,
 	hs *kratosHttp.Server,
+	regClient *registration.Client,
 ) *kratos.App {
-	globalRegHelper = registration.StartRegistration(ctx, ctx.GetLogger(), &registration.Config{
-		ModuleID:          moduleID,
-		ModuleName:        moduleName,
-		Version:           version,
-		Description:       description,
-		GRPCEndpoint:      registration.GetGRPCAdvertiseAddr(ctx, "0.0.0.0:9600"),
-		FrontendEntryUrl:  registration.GetEnvOrDefault("FRONTEND_ENTRY_URL", ""),
-		HttpEndpoint:      registration.GetEnvOrDefault("HTTP_ADVERTISE_ADDR", ""),
-		AdminEndpoint:     registration.GetEnvOrDefault("ADMIN_GRPC_ENDPOINT", ""),
-		OpenapiSpec:       assets.OpenApiData,
-		ProtoDescriptor:   assets.DescriptorData,
-		MenusYaml:         assets.MenusData,
-		HeartbeatInterval: 30 * time.Second,
-		RetryInterval:     5 * time.Second,
-		MaxRetries:        60,
-	})
+	if regClient != nil {
+		// Populate the full registration config on the pre-created client
+		regClient.SetConfig(&registration.Config{
+			ModuleID:         moduleID,
+			ModuleName:       moduleName,
+			Version:          version,
+			Description:      description,
+			GRPCEndpoint:     registration.GetGRPCAdvertiseAddr(ctx, "0.0.0.0:9600"),
+			FrontendEntryUrl: registration.GetEnvOrDefault("FRONTEND_ENTRY_URL", ""),
+			HttpEndpoint:     registration.GetEnvOrDefault("HTTP_ADVERTISE_ADDR", ""),
+			OpenapiSpec:      assets.OpenApiData,
+			ProtoDescriptor:  assets.DescriptorData,
+			MenusYaml:        assets.MenusData,
+		})
+		globalRegHelper = registration.StartRegistrationWithClient(ctx.GetLogger(), regClient)
+	}
 
 	return bootstrap.NewApp(ctx, gs, hs)
 }
@@ -60,7 +60,11 @@ func runApp() error {
 		},
 	)
 
-	defer globalRegHelper.Stop()
+	defer func() {
+		if globalRegHelper != nil {
+			globalRegHelper.Stop()
+		}
+	}()
 
 	return bootstrap.RunApp(ctx, initApp)
 }
@@ -70,4 +74,3 @@ func main() {
 		panic(err)
 	}
 }
-

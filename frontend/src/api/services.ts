@@ -26,19 +26,6 @@ export interface SharedLink {
   policies?: SharePolicy[];
 }
 
-export interface EmailTemplate {
-  id: string;
-  tenantId: number;
-  name: string;
-  subject: string;
-  htmlBody: string;
-  isDefault: boolean;
-  createdBy?: number;
-  updatedBy?: number;
-  createTime: string;
-  updateTime?: string;
-}
-
 export type SharePolicyType =
   | 'SHARE_POLICY_TYPE_BLACKLIST'
   | 'SHARE_POLICY_TYPE_WHITELIST';
@@ -82,7 +69,6 @@ export interface CreateShareRequest {
   resourceId: string;
   recipientEmail: string;
   message?: string;
-  templateId?: string;
   policies?: CreateSharePolicyInput[];
 }
 
@@ -94,30 +80,6 @@ export interface CreateShareResponse {
 export interface ListSharesResponse {
   shares: SharedLink[];
   total: number;
-}
-
-export interface CreateTemplateRequest {
-  name: string;
-  subject: string;
-  htmlBody: string;
-  isDefault?: boolean;
-}
-
-export interface UpdateTemplateRequest {
-  name?: string;
-  subject?: string;
-  htmlBody?: string;
-  isDefault?: boolean;
-}
-
-export interface ListTemplatesResponse {
-  templates: EmailTemplate[];
-  total: number;
-}
-
-export interface PreviewTemplateResponse {
-  renderedSubject: string;
-  renderedBody: string;
 }
 
 export interface ViewSharedContentResponse {
@@ -192,50 +154,3 @@ export const ShareService = {
     ),
 };
 
-// ==================== Template Service ====================
-
-export const TemplateService = {
-  create: (data: CreateTemplateRequest, options?: RequestOptions) =>
-    sharingApi.post<{ template: EmailTemplate }>('/templates', data, options),
-
-  get: (id: string, options?: RequestOptions) =>
-    sharingApi.get<{ template: EmailTemplate }>(`/templates/${id}`, options),
-
-  list: (
-    params?: { page?: number; pageSize?: number },
-    options?: RequestOptions,
-  ) => {
-    const query = new URLSearchParams();
-    if (params?.page) query.set('page', String(params.page));
-    if (params?.pageSize) query.set('pageSize', String(params.pageSize));
-    const qs = query.toString();
-    return sharingApi.get<ListTemplatesResponse>(
-      `/templates${qs ? `?${qs}` : ''}`,
-      options,
-    );
-  },
-
-  update: (
-    id: string,
-    data: UpdateTemplateRequest,
-    options?: RequestOptions,
-  ) =>
-    sharingApi.put<{ template: EmailTemplate }>(
-      `/templates/${id}`,
-      data,
-      options,
-    ),
-
-  delete: (id: string, options?: RequestOptions) =>
-    sharingApi.delete<void>(`/templates/${id}`, options),
-
-  preview: (
-    data: { subject: string; htmlBody: string },
-    options?: RequestOptions,
-  ) =>
-    sharingApi.post<PreviewTemplateResponse>(
-      '/templates/preview',
-      data,
-      options,
-    ),
-};

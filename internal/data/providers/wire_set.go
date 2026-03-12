@@ -15,10 +15,11 @@ import (
 var ProviderSet = wire.NewSet(
 	data.NewRedisClient,
 	data.NewEntClient,
+	data.NewRegistrationClient,
+	data.NewModuleDialer,
 	data.NewWardenClient,
 	data.NewPaperlessClient,
-	data.NewMailSender,
+	data.NewNotificationClient,
 	data.NewSharedLinkRepo,
-	data.NewEmailTemplateRepo,
 	data.NewSharePolicyRepo,
 )

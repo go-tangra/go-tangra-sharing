@@ -32,7 +32,7 @@ func NewSharedLinkRepo(ctx *bootstrap.Context, entClient *entCrud.EntClient[*ent
 }
 
 // Create creates a new shared link
-func (r *SharedLinkRepo) Create(ctx context.Context, tenantID uint32, resourceType, resourceID, resourceName, token string, encryptedContent, nonce []byte, recipientEmail, message, templateID string, createdBy *uint32) (*ent.SharedLink, error) {
+func (r *SharedLinkRepo) Create(ctx context.Context, tenantID uint32, resourceType, resourceID, resourceName, token string, encryptedContent, nonce []byte, recipientEmail, message string, createdBy *uint32) (*ent.SharedLink, error) {
 	id := uuid.New().String()
 
 	builder := r.entClient.Client().SharedLink.Create().
@@ -51,9 +51,6 @@ func (r *SharedLinkRepo) Create(ctx context.Context, tenantID uint32, resourceTy
 
 	if message != "" {
 		builder.SetMessage(message)
-	}
-	if templateID != "" {
-		builder.SetTemplateID(templateID)
 	}
 	if createdBy != nil {
 		builder.SetCreateBy(*createdBy)
@@ -133,10 +130,16 @@ func (r *SharedLinkRepo) ListByTenant(ctx context.Context, tenantID uint32, reso
 	return entities, total, nil
 }
 
-// MarkViewed marks a shared link as viewed and clears the encrypted content
+// MarkViewed atomically marks a shared link as viewed and clears the encrypted content.
+// Uses a conditional UPDATE (WHERE viewed=false) to prevent TOCTOU race conditions.
+// Returns an error if the share was already viewed (0 rows affected).
 func (r *SharedLinkRepo) MarkViewed(ctx context.Context, id string, viewerIP string) error {
 	now := time.Now()
-	builder := r.entClient.Client().SharedLink.UpdateOneID(id).
+	builder := r.entClient.Client().SharedLink.Update().
+		Where(
+			sharedlink.IDEQ(id),
+			sharedlink.ViewedEQ(false),
+		).
 		SetViewed(true).
 		SetViewedAt(now).
 		ClearEncryptedContent().
@@ -146,10 +149,13 @@ func (r *SharedLinkRepo) MarkViewed(ctx context.Context, id string, viewerIP str
 		builder.SetViewedIP(viewerIP)
 	}
 
-	_, err := builder.Save(ctx)
+	n, err := builder.Save(ctx)
 	if err != nil {
 		r.log.Errorf("mark shared link viewed failed: %s", err.Error())
 		return sharingV1.ErrorInternalServerError("mark shared link viewed failed")
+	}
+	if n == 0 {
+		return sharingV1.ErrorShareAlreadyViewed("this share has already been viewed")
 	}
 	return nil
 }

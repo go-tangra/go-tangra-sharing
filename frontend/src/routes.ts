@@ -24,16 +24,6 @@ const routes: RouteRecordRaw[] = [
         },
         component: () => import('./views/links/index.vue'),
       },
-      {
-        path: 'templates',
-        name: 'SharingTemplates',
-        meta: {
-          icon: 'lucide:mail',
-          title: 'sharing.menu.templates',
-          authority: ['platform:admin', 'tenant:manager'],
-        },
-        component: () => import('./views/templates/index.vue'),
-      },
     ],
   },
 ];

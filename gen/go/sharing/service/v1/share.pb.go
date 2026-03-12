@@ -441,8 +441,6 @@ type CreateShareRequest struct {
 	RecipientEmail string `protobuf:"bytes,3,opt,name=recipient_email,json=recipientEmail,proto3" json:"recipient_email,omitempty"`
 	// Optional message to include in the email
 	Message string `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
-	// Optional template ID (uses default if not specified)
-	TemplateId *string `protobuf:"bytes,5,opt,name=template_id,json=templateId,proto3,oneof" json:"template_id,omitempty"`
 	// Optional access restriction policies
 	Policies      []*CreateSharePolicyInput `protobuf:"bytes,6,rep,name=policies,proto3" json:"policies,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -503,13 +501,6 @@ func (x *CreateShareRequest) GetRecipientEmail() string {
 func (x *CreateShareRequest) GetMessage() string {
 	if x != nil {
 		return x.Message
-	}
-	return ""
-}
-
-func (x *CreateShareRequest) GetTemplateId() string {
-	if x != nil && x.TemplateId != nil {
-		return *x.TemplateId
 	}
 	return ""
 }
@@ -1330,17 +1321,14 @@ const file_sharing_service_v1_share_proto_rawDesc = "" +
 	"\bpolicies\x18\x0e \x03(\v2\x1f.sharing.service.v1.SharePolicyR\bpoliciesB\f\n" +
 	"\n" +
 	"_viewed_atB\r\n" +
-	"\v_created_by\"\x8d\x03\n" +
+	"\v_created_by\"\xc2\x02\n" +
 	"\x12CreateShareRequest\x12R\n" +
 	"\rresource_type\x18\x01 \x01(\x0e2 .sharing.service.v1.ResourceTypeB\v\xe0A\x02\xbaH\x05\x82\x01\x02 \x00R\fresourceType\x12.\n" +
 	"\vresource_id\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xff\x01R\n" +
 	"resourceId\x126\n" +
 	"\x0frecipient_email\x18\x03 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x03\x18\xc0\x02R\x0erecipientEmail\x12\"\n" +
-	"\amessage\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10R\amessage\x12?\n" +
-	"\vtemplate_id\x18\x05 \x01(\tB\x19\xbaH\x16r\x14\x18$2\x10^[a-fA-F0-9\\-]*$H\x00R\n" +
-	"templateId\x88\x01\x01\x12F\n" +
-	"\bpolicies\x18\x06 \x03(\v2*.sharing.service.v1.CreateSharePolicyInputR\bpoliciesB\x0e\n" +
-	"\f_template_id\"O\n" +
+	"\amessage\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10R\amessage\x12F\n" +
+	"\bpolicies\x18\x06 \x03(\v2*.sharing.service.v1.CreateSharePolicyInputR\bpoliciesJ\x04\b\x05\x10\x06\"O\n" +
 	"\x13CreateShareResponse\x12\x19\n" +
 	"\bshare_id\x18\x01 \x01(\tR\ashareId\x12\x1d\n" +
 	"\n" +
@@ -1511,7 +1499,6 @@ func file_sharing_service_v1_share_proto_init() {
 		return
 	}
 	file_sharing_service_v1_share_proto_msgTypes[1].OneofWrappers = []any{}
-	file_sharing_service_v1_share_proto_msgTypes[2].OneofWrappers = []any{}
 	file_sharing_service_v1_share_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

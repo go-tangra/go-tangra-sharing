@@ -8,7 +8,6 @@ import (
 	"github.com/go-kratos/kratos/v2/middleware/metadata"
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
 	"github.com/go-kratos/kratos/v2/middleware/tracing"
-	"github.com/go-kratos/kratos/v2/middleware/validate"
 	"github.com/go-kratos/kratos/v2/transport/grpc"
 	"github.com/tx7do/kratos-bootstrap/bootstrap"
 
@@ -37,7 +36,6 @@ func NewGRPCServer(
 	ctx *bootstrap.Context,
 	certManager *cert.CertManager,
 	shareSvc *service.ShareService,
-	templateSvc *service.TemplateService,
 	backupSvc *service.BackupService,
 ) *grpc.Server {
 	cfg := ctx.GetConfig()
@@ -97,7 +95,7 @@ func NewGRPCServer(
 		),
 	))
 
-	ms = append(ms, validate.Validator())
+	ms = append(ms, protoValidator())
 
 	opts = append(opts, grpc.Middleware(ms...))
 
@@ -105,7 +103,6 @@ func NewGRPCServer(
 
 	// Register services
 	sharingV1.RegisterRedactedSharingShareServiceServer(srv, shareSvc, nil)
-	sharingV1.RegisterRedactedSharingTemplateServiceServer(srv, templateSvc, nil)
 	sharingV1.RegisterRedactedBackupServiceServer(srv, backupSvc, nil)
 
 	return srv

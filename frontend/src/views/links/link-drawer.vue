@@ -22,7 +22,6 @@ import {
 
 import { $t } from 'shell/locales';
 import { useSharingShareStore } from '../../stores/sharing-share.state';
-import { useSharingTemplateStore } from '../../stores/sharing-template.state';
 import type {
   SharedLink,
   SharePolicy,
@@ -32,14 +31,12 @@ import type {
 } from '../../api/services';
 
 const shareStore = useSharingShareStore();
-const templateStore = useSharingTemplateStore();
 
 const data = ref<{
   mode: 'create' | 'view';
   row?: SharedLink;
 }>();
 const loading = ref(false);
-const templateOptions = ref<Array<{ value: string; label: string }>>([]);
 
 // Policy state for view mode
 const policies = ref<SharePolicy[]>([]);
@@ -77,13 +74,11 @@ const formState = ref<{
   resourceId: string;
   recipientEmail: string;
   message: string;
-  templateId?: string;
 }>({
   resourceType: 'RESOURCE_TYPE_SECRET',
   resourceId: '',
   recipientEmail: '',
   message: '',
-  templateId: undefined,
 });
 
 const resourceTypeOptions = computed(() => [
@@ -196,18 +191,6 @@ function resourceTypeToName(type: string | undefined) {
   return option?.label ?? type ?? '';
 }
 
-async function loadTemplates() {
-  try {
-    const resp = await templateStore.listTemplates({ page: 1, pageSize: 100 });
-    templateOptions.value = (resp.templates ?? []).map((t) => ({
-      value: t.id,
-      label: `${t.name}${t.isDefault ? ' (Default)' : ''}`,
-    }));
-  } catch (e) {
-    console.error('Failed to load templates:', e);
-  }
-}
-
 async function loadPolicies(shareLinkId: string) {
   policiesLoading.value = true;
   try {
@@ -300,7 +283,6 @@ async function handleSubmit() {
       resourceId: formState.value.resourceId,
       recipientEmail: formState.value.recipientEmail,
       message: formState.value.message || undefined,
-      templateId: formState.value.templateId,
       policies:
         createPolicies.value.length > 0 ? createPolicies.value : undefined,
     });
@@ -324,7 +306,6 @@ function resetForm() {
     resourceId: '',
     recipientEmail: '',
     message: '',
-    templateId: undefined,
   };
   createPolicies.value = [];
   showCreatePolicyForm.value = false;
@@ -344,7 +325,6 @@ const [Drawer, drawerApi] = useVbenDrawer({
 
       if (data.value?.mode === 'create') {
         resetForm();
-        await loadTemplates();
       } else if (data.value?.mode === 'view' && data.value.row) {
         showPolicyForm.value = false;
         resetPolicyForm();
@@ -536,19 +516,6 @@ const share = computed(() => data.value?.row);
             :rows="3"
             :maxlength="1024"
             :placeholder="$t('sharing.page.link.messagePlaceholder')"
-          />
-        </FormItem>
-
-        <FormItem
-          v-if="templateOptions.length > 0"
-          :label="$t('sharing.menu.templates')"
-          name="templateId"
-        >
-          <Select
-            v-model:value="formState.templateId"
-            :options="templateOptions"
-            :placeholder="$t('sharing.page.link.selectTemplate')"
-            allow-clear
           />
         </FormItem>
 

@@ -9,43 +9,6 @@ import (
 )
 
 var (
-	// SharingEmailTemplatesColumns holds the columns for the "sharing_email_templates" table.
-	SharingEmailTemplatesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true, Comment: "UUID primary key"},
-		{Name: "create_by", Type: field.TypeUint32, Nullable: true, Comment: "创建者ID"},
-		{Name: "update_by", Type: field.TypeUint32, Nullable: true, Comment: "更新者ID"},
-		{Name: "create_time", Type: field.TypeTime, Nullable: true, Comment: "创建时间"},
-		{Name: "update_time", Type: field.TypeTime, Nullable: true, Comment: "更新时间"},
-		{Name: "delete_time", Type: field.TypeTime, Nullable: true, Comment: "删除时间"},
-		{Name: "tenant_id", Type: field.TypeUint32, Nullable: true, Comment: "租户ID", Default: 0},
-		{Name: "name", Type: field.TypeString, Size: 255, Comment: "Template name"},
-		{Name: "subject", Type: field.TypeString, Size: 1024, Comment: "Email subject (Go template)"},
-		{Name: "html_body", Type: field.TypeString, Size: 2147483647, Comment: "Email HTML body (Go html/template)"},
-		{Name: "is_default", Type: field.TypeBool, Comment: "Whether this is the default template for the tenant", Default: false},
-	}
-	// SharingEmailTemplatesTable holds the schema information for the "sharing_email_templates" table.
-	SharingEmailTemplatesTable = &schema.Table{
-		Name:       "sharing_email_templates",
-		Columns:    SharingEmailTemplatesColumns,
-		PrimaryKey: []*schema.Column{SharingEmailTemplatesColumns[0]},
-		Indexes: []*schema.Index{
-			{
-				Name:    "emailtemplate_tenant_id_name",
-				Unique:  true,
-				Columns: []*schema.Column{SharingEmailTemplatesColumns[6], SharingEmailTemplatesColumns[7]},
-			},
-			{
-				Name:    "emailtemplate_tenant_id_is_default",
-				Unique:  false,
-				Columns: []*schema.Column{SharingEmailTemplatesColumns[6], SharingEmailTemplatesColumns[10]},
-			},
-			{
-				Name:    "emailtemplate_tenant_id",
-				Unique:  false,
-				Columns: []*schema.Column{SharingEmailTemplatesColumns[6]},
-			},
-		},
-	}
 	// SharingSharePoliciesColumns holds the columns for the "sharing_share_policies" table.
 	SharingSharePoliciesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true, Comment: "UUID primary key"},
@@ -94,7 +57,6 @@ var (
 		{Name: "encryption_nonce", Type: field.TypeBytes, Nullable: true, Comment: "AES-256-GCM nonce"},
 		{Name: "recipient_email", Type: field.TypeString, Size: 320, Comment: "Recipient email address"},
 		{Name: "message", Type: field.TypeString, Nullable: true, Size: 2048, Comment: "Optional message to recipient"},
-		{Name: "template_id", Type: field.TypeString, Nullable: true, Size: 36, Comment: "Email template ID used"},
 		{Name: "viewed", Type: field.TypeBool, Comment: "Whether the share has been viewed", Default: false},
 		{Name: "viewed_at", Type: field.TypeTime, Nullable: true, Comment: "When the share was viewed"},
 		{Name: "viewed_ip", Type: field.TypeString, Nullable: true, Size: 45, Comment: "IP address of viewer"},
@@ -129,22 +91,18 @@ var (
 			{
 				Name:    "sharedlink_tenant_id_viewed",
 				Unique:  false,
-				Columns: []*schema.Column{SharingSharedLinksColumns[5], SharingSharedLinksColumns[15]},
+				Columns: []*schema.Column{SharingSharedLinksColumns[5], SharingSharedLinksColumns[14]},
 			},
 		},
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
-		SharingEmailTemplatesTable,
 		SharingSharePoliciesTable,
 		SharingSharedLinksTable,
 	}
 )
 
 func init() {
-	SharingEmailTemplatesTable.Annotation = &entsql.Annotation{
-		Table: "sharing_email_templates",
-	}
 	SharingSharePoliciesTable.Annotation = &entsql.Annotation{
 		Table: "sharing_share_policies",
 	}

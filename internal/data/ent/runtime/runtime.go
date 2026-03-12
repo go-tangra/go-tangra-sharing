@@ -5,7 +5,6 @@ package runtime
 import (
 	"context"
 
-	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/emailtemplate"
 	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/schema"
 	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/sharedlink"
 	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/sharepolicy"
@@ -18,72 +17,6 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
-	emailtemplateMixin := schema.EmailTemplate{}.Mixin()
-	emailtemplate.Policy = privacy.NewPolicies(emailtemplateMixin[3], schema.EmailTemplate{})
-	emailtemplate.Hooks[0] = func(next ent.Mutator) ent.Mutator {
-		return ent.MutateFunc(func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-			if err := emailtemplate.Policy.EvalMutation(ctx, m); err != nil {
-				return nil, err
-			}
-			return next.Mutate(ctx, m)
-		})
-	}
-	emailtemplateMixinFields3 := emailtemplateMixin[3].Fields()
-	_ = emailtemplateMixinFields3
-	emailtemplateFields := schema.EmailTemplate{}.Fields()
-	_ = emailtemplateFields
-	// emailtemplateDescTenantID is the schema descriptor for tenant_id field.
-	emailtemplateDescTenantID := emailtemplateMixinFields3[0].Descriptor()
-	// emailtemplate.DefaultTenantID holds the default value on creation for the tenant_id field.
-	emailtemplate.DefaultTenantID = emailtemplateDescTenantID.Default.(uint32)
-	// emailtemplateDescName is the schema descriptor for name field.
-	emailtemplateDescName := emailtemplateFields[1].Descriptor()
-	// emailtemplate.NameValidator is a validator for the "name" field. It is called by the builders before save.
-	emailtemplate.NameValidator = func() func(string) error {
-		validators := emailtemplateDescName.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(name string) error {
-			for _, fn := range fns {
-				if err := fn(name); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
-	// emailtemplateDescSubject is the schema descriptor for subject field.
-	emailtemplateDescSubject := emailtemplateFields[2].Descriptor()
-	// emailtemplate.SubjectValidator is a validator for the "subject" field. It is called by the builders before save.
-	emailtemplate.SubjectValidator = func() func(string) error {
-		validators := emailtemplateDescSubject.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(subject string) error {
-			for _, fn := range fns {
-				if err := fn(subject); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
-	// emailtemplateDescHTMLBody is the schema descriptor for html_body field.
-	emailtemplateDescHTMLBody := emailtemplateFields[3].Descriptor()
-	// emailtemplate.HTMLBodyValidator is a validator for the "html_body" field. It is called by the builders before save.
-	emailtemplate.HTMLBodyValidator = emailtemplateDescHTMLBody.Validators[0].(func(string) error)
-	// emailtemplateDescIsDefault is the schema descriptor for is_default field.
-	emailtemplateDescIsDefault := emailtemplateFields[4].Descriptor()
-	// emailtemplate.DefaultIsDefault holds the default value on creation for the is_default field.
-	emailtemplate.DefaultIsDefault = emailtemplateDescIsDefault.Default.(bool)
-	// emailtemplateDescID is the schema descriptor for id field.
-	emailtemplateDescID := emailtemplateFields[0].Descriptor()
-	// emailtemplate.IDValidator is a validator for the "id" field. It is called by the builders before save.
-	emailtemplate.IDValidator = emailtemplateDescID.Validators[0].(func(string) error)
 	sharepolicyMixin := schema.SharePolicy{}.Mixin()
 	sharepolicy.Policy = privacy.NewPolicies(sharepolicyMixin[2], schema.SharePolicy{})
 	sharepolicy.Hooks[0] = func(next ent.Mutator) ent.Mutator {
@@ -240,20 +173,16 @@ func init() {
 	sharedlinkDescMessage := sharedlinkFields[8].Descriptor()
 	// sharedlink.MessageValidator is a validator for the "message" field. It is called by the builders before save.
 	sharedlink.MessageValidator = sharedlinkDescMessage.Validators[0].(func(string) error)
-	// sharedlinkDescTemplateID is the schema descriptor for template_id field.
-	sharedlinkDescTemplateID := sharedlinkFields[9].Descriptor()
-	// sharedlink.TemplateIDValidator is a validator for the "template_id" field. It is called by the builders before save.
-	sharedlink.TemplateIDValidator = sharedlinkDescTemplateID.Validators[0].(func(string) error)
 	// sharedlinkDescViewed is the schema descriptor for viewed field.
-	sharedlinkDescViewed := sharedlinkFields[10].Descriptor()
+	sharedlinkDescViewed := sharedlinkFields[9].Descriptor()
 	// sharedlink.DefaultViewed holds the default value on creation for the viewed field.
 	sharedlink.DefaultViewed = sharedlinkDescViewed.Default.(bool)
 	// sharedlinkDescViewedIP is the schema descriptor for viewed_ip field.
-	sharedlinkDescViewedIP := sharedlinkFields[12].Descriptor()
+	sharedlinkDescViewedIP := sharedlinkFields[11].Descriptor()
 	// sharedlink.ViewedIPValidator is a validator for the "viewed_ip" field. It is called by the builders before save.
 	sharedlink.ViewedIPValidator = sharedlinkDescViewedIP.Validators[0].(func(string) error)
 	// sharedlinkDescRevoked is the schema descriptor for revoked field.
-	sharedlinkDescRevoked := sharedlinkFields[13].Descriptor()
+	sharedlinkDescRevoked := sharedlinkFields[12].Descriptor()
 	// sharedlink.DefaultRevoked holds the default value on creation for the revoked field.
 	sharedlink.DefaultRevoked = sharedlinkDescRevoked.Default.(bool)
 	// sharedlinkDescID is the schema descriptor for id field.

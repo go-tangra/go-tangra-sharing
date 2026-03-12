@@ -2,9 +2,10 @@ package service
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/tx7do/kratos-bootstrap/bootstrap"
@@ -12,56 +13,140 @@ import (
 
 	"github.com/go-tangra/go-tangra-sharing/internal/data"
 	"github.com/go-tangra/go-tangra-sharing/pkg/crypto"
-	"github.com/go-tangra/go-tangra-sharing/pkg/mail"
 
-	"github.com/go-tangra/go-tangra-common/viewer"
-
+	notificationv1 "buf.build/gen/go/go-tangra/notification/protocolbuffers/go/notification/service/v1"
 	sharingV1 "github.com/go-tangra/go-tangra-sharing/gen/go/sharing/service/v1"
+)
+
+const (
+	emailRateLimit  = 10              // max emails per window per tenant
+	emailRateWindow = 1 * time.Minute // rate limit window
+)
+
+// emailRateLimiter tracks email send counts per tenant within a time window.
+type emailRateLimiter struct {
+	mu      sync.Mutex
+	counts  map[uint32]int
+	resetAt time.Time
+}
+
+func newEmailRateLimiter() *emailRateLimiter {
+	return &emailRateLimiter{
+		counts:  make(map[uint32]int),
+		resetAt: time.Now().Add(emailRateWindow),
+	}
+}
+
+func (r *emailRateLimiter) allow(tenantID uint32) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	now := time.Now()
+	if now.After(r.resetAt) {
+		r.counts = make(map[uint32]int)
+		r.resetAt = now.Add(emailRateWindow)
+	}
+
+	if r.counts[tenantID] >= emailRateLimit {
+		return false
+	}
+	r.counts[tenantID]++
+	return true
+}
+
+const (
+	// notificationTemplateName is the name of the template registered in the notification service.
+	notificationTemplateName = "sharing-service-template"
+	// notificationChannelName is the name of the channel to use in the notification service.
+	notificationChannelName = "Default SMTP"
+
+	// defaultSubjectTemplate is the default email subject template.
+	defaultSubjectTemplate = `{{.SenderName}} shared a {{.ResourceType}} with you`
+
+	// defaultHTMLBodyTemplate is the default email body template.
+	defaultHTMLBodyTemplate = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .header { text-align: center; margin-bottom: 30px; }
+    .header h1 { color: #1a1a1a; font-size: 24px; margin: 0; }
+    .content { color: #333; line-height: 1.6; }
+    .message { background: #f8f9fa; border-left: 4px solid #4f46e5; padding: 15px; margin: 20px 0; border-radius: 0 4px 4px 0; }
+    .btn { display: inline-block; background: #4f46e5; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+    .btn:hover { background: #4338ca; }
+    .footer { text-align: center; color: #999; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
+    .warning { color: #dc2626; font-size: 13px; margin-top: 15px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Shared {{.ResourceType}}</h1>
+    </div>
+    <div class="content">
+      <p><strong>{{.SenderName}}</strong> has shared a {{.ResourceType}} with you: <strong>{{.ResourceName}}</strong></p>
+      {{if .Message}}
+      <div class="message">
+        <p>{{.Message}}</p>
+      </div>
+      {{end}}
+      <p style="text-align: center;">
+        <a href="{{.ShareLink}}" class="btn">View Shared {{.ResourceType}}</a>
+      </p>
+      <p class="warning">This link can only be viewed once. After viewing, the content will no longer be accessible.</p>
+    </div>
+    <div class="footer">
+      <p>This email was sent via Go Tangra Sharing</p>
+    </div>
+  </div>
+</body>
+</html>`
 )
 
 // ShareService implements the SharingShareService gRPC service
 type ShareService struct {
 	sharingV1.UnimplementedSharingShareServiceServer
 
-	log             *log.Helper
-	linkRepo        *data.SharedLinkRepo
-	templateRepo    *data.EmailTemplateRepo
-	policyRepo      *data.SharePolicyRepo
-	wardenClient    *data.WardenClient
-	paperlessClient *data.PaperlessClient
-	mailSender      *mail.Sender
-	encryptionKey   []byte
-	appHost         string
+	log                *log.Helper
+	linkRepo           *data.SharedLinkRepo
+	policyRepo         *data.SharePolicyRepo
+	wardenClient       *data.WardenClient
+	paperlessClient    *data.PaperlessClient
+	notificationClient *data.NotificationClient
+	encryptionKey      []byte
+	appHost            string
+	rateLimiter        *emailRateLimiter
+
+	// notifTemplateID is resolved once on first email send
+	notifTemplateOnce sync.Once
+	notifTemplateID   string
+	notifTemplateErr  error
 }
 
 // NewShareService creates a new ShareService
 func NewShareService(
 	ctx *bootstrap.Context,
 	linkRepo *data.SharedLinkRepo,
-	templateRepo *data.EmailTemplateRepo,
 	policyRepo *data.SharePolicyRepo,
 	wardenClient *data.WardenClient,
 	paperlessClient *data.PaperlessClient,
-	mailSender *mail.Sender,
+	notificationClient *data.NotificationClient,
 ) *ShareService {
 	l := ctx.NewLoggerHelper("sharing/service/share")
 
-	// Parse encryption key from environment
+	// Parse encryption key from environment (required)
 	keyHex := os.Getenv("SHARING_ENCRYPTION_KEY")
-	var key []byte
-	if keyHex != "" {
-		var err error
-		key, err = crypto.ParseEncryptionKey(keyHex)
-		if err != nil {
-			l.Errorf("Invalid SHARING_ENCRYPTION_KEY, falling back to dev key: %v", err)
-			key = make([]byte, 32)
-			copy(key, []byte("sharing-dev-key-32-bytes-long!!!"))
-		}
-	} else {
-		l.Warn("SHARING_ENCRYPTION_KEY not set, generating random key (shares will not survive restarts)")
-		key = make([]byte, 32)
-		// Use a deterministic fallback for dev — in production SHARING_ENCRYPTION_KEY must be set
-		copy(key, []byte("sharing-dev-key-32-bytes-long!!!"))
+	if keyHex == "" {
+		l.Errorf("SHARING_ENCRYPTION_KEY environment variable is not set — refusing to start")
+		panic("SHARING_ENCRYPTION_KEY must be set")
+	}
+	key, err := crypto.ParseEncryptionKey(keyHex)
+	if err != nil {
+		l.Errorf("Invalid SHARING_ENCRYPTION_KEY: %v", err)
+		panic("SHARING_ENCRYPTION_KEY is invalid: " + err.Error())
 	}
 
 	appHost := os.Getenv("APP_HOST")
@@ -70,15 +155,15 @@ func NewShareService(
 	}
 
 	return &ShareService{
-		log:             l,
-		linkRepo:        linkRepo,
-		templateRepo:    templateRepo,
-		policyRepo:      policyRepo,
-		wardenClient:    wardenClient,
-		paperlessClient: paperlessClient,
-		mailSender:      mailSender,
-		encryptionKey:   key,
-		appHost:         appHost,
+		log:                l,
+		linkRepo:           linkRepo,
+		policyRepo:         policyRepo,
+		wardenClient:       wardenClient,
+		paperlessClient:    paperlessClient,
+		notificationClient: notificationClient,
+		encryptionKey:      key,
+		appHost:            appHost,
+		rateLimiter:        newEmailRateLimiter(),
 	}
 }
 
@@ -108,7 +193,7 @@ func (s *ShareService) CreateShare(ctx context.Context, req *sharingV1.CreateSha
 		secret, err := s.wardenClient.GetSecret(ctx, tenantID, req.ResourceId)
 		if err != nil {
 			s.log.Errorf("Failed to get secret from warden: %v", err)
-			return nil, sharingV1.ErrorWardenUnavailable("failed to fetch secret: %v", err)
+			return nil, sharingV1.ErrorWardenUnavailable("failed to fetch secret")
 		}
 		resourceName = secret.GetName()
 
@@ -116,7 +201,7 @@ func (s *ShareService) CreateShare(ctx context.Context, req *sharingV1.CreateSha
 		password, err := s.wardenClient.GetSecretPassword(ctx, tenantID, req.ResourceId)
 		if err != nil {
 			s.log.Errorf("Failed to get secret password from warden: %v", err)
-			return nil, sharingV1.ErrorWardenUnavailable("failed to fetch secret password: %v", err)
+			return nil, sharingV1.ErrorWardenUnavailable("failed to fetch secret password")
 		}
 		contentBytes = []byte(password)
 
@@ -126,7 +211,7 @@ func (s *ShareService) CreateShare(ctx context.Context, req *sharingV1.CreateSha
 		doc, err := s.paperlessClient.GetDocument(ctx, tenantID, req.ResourceId)
 		if err != nil {
 			s.log.Errorf("Failed to get document from paperless: %v", err)
-			return nil, sharingV1.ErrorPaperlessUnavailable("failed to fetch document: %v", err)
+			return nil, sharingV1.ErrorPaperlessUnavailable("failed to fetch document")
 		}
 		resourceName = doc.GetName()
 
@@ -134,7 +219,7 @@ func (s *ShareService) CreateShare(ctx context.Context, req *sharingV1.CreateSha
 		content, _, _, err := s.paperlessClient.DownloadDocument(ctx, tenantID, req.ResourceId)
 		if err != nil {
 			s.log.Errorf("Failed to download document from paperless: %v", err)
-			return nil, sharingV1.ErrorPaperlessUnavailable("failed to download document: %v", err)
+			return nil, sharingV1.ErrorPaperlessUnavailable("failed to download document")
 		}
 		contentBytes = content
 
@@ -157,12 +242,7 @@ func (s *ShareService) CreateShare(ctx context.Context, req *sharingV1.CreateSha
 	}
 
 	// Store in database
-	var templateID string
-	if req.TemplateId != nil {
-		templateID = *req.TemplateId
-	}
-
-	entity, err := s.linkRepo.Create(ctx, tenantID, resourceTypeStr, req.ResourceId, resourceName, token, ciphertext, nonce, req.RecipientEmail, req.Message, templateID, createdBy)
+	entity, err := s.linkRepo.Create(ctx, tenantID, resourceTypeStr, req.ResourceId, resourceName, token, ciphertext, nonce, req.RecipientEmail, req.Message, createdBy)
 	if err != nil {
 		return nil, err
 	}
@@ -185,12 +265,25 @@ func (s *ShareService) CreateShare(ctx context.Context, req *sharingV1.CreateSha
 	// Build share link
 	shareLink := fmt.Sprintf("%s/#/shared/%s", s.appHost, token)
 
-	// Send email asynchronously
-	go func() {
-		if sendErr := s.sendShareEmail(tenantID, req.RecipientEmail, senderName, resourceName, resourceTypeStr, req.Message, shareLink, templateID); sendErr != nil {
-			s.log.Errorf("Failed to send share email: %v", sendErr)
-		}
-	}()
+	// Check email rate limit before sending
+	if !s.rateLimiter.allow(tenantID) {
+		s.log.Warnf("Email rate limit exceeded for tenant %d, skipping email to %s", tenantID, req.RecipientEmail)
+	} else {
+		// Send email asynchronously with panic recovery.
+		// We must NOT derive from the request ctx — gRPC cancels it after the handler returns.
+		// Build a detached context that carries the same metadata.
+		sendCtx := data.DetachedMetadataContext(ctx, tenantID)
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					s.log.Errorf("Panic in email send goroutine: %v", r)
+				}
+			}()
+			if sendErr := s.sendShareEmail(sendCtx, req.RecipientEmail, senderName, resourceName, resourceTypeStr, req.Message, shareLink); sendErr != nil {
+				s.log.Errorf("Failed to send share email: %v", sendErr)
+			}
+		}()
+	}
 
 	return &sharingV1.CreateShareResponse{
 		ShareId:   entity.ID,
@@ -200,11 +293,13 @@ func (s *ShareService) CreateShare(ctx context.Context, req *sharingV1.CreateSha
 
 // GetShare retrieves a share by ID
 func (s *ShareService) GetShare(ctx context.Context, req *sharingV1.GetShareRequest) (*sharingV1.GetShareResponse, error) {
+	tenantID := getTenantIDFromContext(ctx)
+
 	entity, err := s.linkRepo.GetByID(ctx, req.Id)
 	if err != nil {
 		return nil, err
 	}
-	if entity == nil {
+	if entity == nil || (entity.TenantID != nil && *entity.TenantID != tenantID) {
 		return nil, sharingV1.ErrorShareNotFound("share not found")
 	}
 
@@ -264,11 +359,13 @@ func (s *ShareService) ListShares(ctx context.Context, req *sharingV1.ListShares
 
 // RevokeShare revokes a shared link
 func (s *ShareService) RevokeShare(ctx context.Context, req *sharingV1.RevokeShareRequest) (*emptypb.Empty, error) {
+	tenantID := getTenantIDFromContext(ctx)
+
 	entity, err := s.linkRepo.GetByID(ctx, req.Id)
 	if err != nil {
 		return nil, err
 	}
-	if entity == nil {
+	if entity == nil || (entity.TenantID != nil && *entity.TenantID != tenantID) {
 		return nil, sharingV1.ErrorShareNotFound("share not found")
 	}
 
@@ -297,13 +394,15 @@ func (s *ShareService) ViewSharedContent(ctx context.Context, req *sharingV1.Vie
 		return nil, sharingV1.ErrorShareAlreadyViewed("this share has already been viewed")
 	}
 
-	// Evaluate access policies before decrypting
+	// Evaluate access policies before decrypting (fail-closed: deny if policies can't be loaded)
 	policies, err := s.policyRepo.ListByShareLinkID(ctx, entity.ID)
 	if err != nil {
-		s.log.Warnf("Failed to load share policies: %v", err)
+		s.log.Errorf("Failed to load share policies, denying access: %v", err)
+		return nil, sharingV1.ErrorShareAccessDenied("unable to verify access policies")
 	}
+
+	clientIP := getClientIPFromContext(ctx)
 	if len(policies) > 0 {
-		clientIP := getClientIPFromContext(ctx)
 		if policyErr := EvaluatePolicies(policies, clientIP); policyErr != nil {
 			return nil, policyErr
 		}
@@ -319,9 +418,11 @@ func (s *ShareService) ViewSharedContent(ctx context.Context, req *sharingV1.Vie
 		return nil, sharingV1.ErrorEncryptionError("failed to decrypt content")
 	}
 
-	// Mark as viewed
-	if markErr := s.linkRepo.MarkViewed(ctx, entity.ID, ""); markErr != nil {
-		s.log.Warnf("Failed to mark share as viewed: %v", markErr)
+	// Atomically mark as viewed (WHERE viewed=false) — prevents TOCTOU race.
+	// Only return decrypted content if the atomic mark succeeds.
+	if markErr := s.linkRepo.MarkViewed(ctx, entity.ID, clientIP); markErr != nil {
+		s.log.Errorf("Failed to consume share: %v", markErr)
+		return nil, markErr
 	}
 
 	resp := &sharingV1.ViewSharedContentResponse{
@@ -342,54 +443,72 @@ func (s *ShareService) ViewSharedContent(ctx context.Context, req *sharingV1.Vie
 	return resp, nil
 }
 
-// sendShareEmail sends the share notification email
-func (s *ShareService) sendShareEmail(tenantID uint32, recipientEmail, senderName, resourceName, resourceType, message, shareLink, templateID string) error {
-	// Use system viewer context for background goroutine (bypasses ENT privacy checks)
-	ctx := viewer.NewSystemViewerContext(context.Background())
+// ensureNotificationTemplate resolves (or creates) the sharing template in the notification service.
+// Called lazily on first email send. Uses the request context to forward tenant/user metadata.
+func (s *ShareService) ensureNotificationTemplate(ctx context.Context) (string, error) {
+	s.notifTemplateOnce.Do(func() {
+		s.log.Info("Resolving notification template for sharing service...")
 
-	// Try to load template
-	var subjectTmpl, bodyTmpl string
-
-	if templateID != "" {
-		tmpl, err := s.templateRepo.GetByID(ctx, templateID)
-		if err == nil && tmpl != nil {
-			subjectTmpl = tmpl.Subject
-			bodyTmpl = tmpl.HTMLBody
+		// Search for existing template
+		tmpl, err := s.notificationClient.FindTemplateByName(ctx, notificationTemplateName)
+		if err != nil {
+			s.notifTemplateErr = fmt.Errorf("search notification template: %w", err)
+			return
 		}
-	}
-
-	if subjectTmpl == "" || bodyTmpl == "" {
-		// Try default template
-		tmpl, err := s.templateRepo.GetDefault(ctx, tenantID)
-		if err == nil && tmpl != nil {
-			subjectTmpl = tmpl.Subject
-			bodyTmpl = tmpl.HTMLBody
+		if tmpl != nil {
+			s.notifTemplateID = tmpl.GetId()
+			s.log.Infof("Found existing notification template: %s", s.notifTemplateID)
+			return
 		}
-	}
 
-	// Fall back to built-in defaults
-	if subjectTmpl == "" {
-		subjectTmpl = mail.DefaultSubjectTemplate
-	}
-	if bodyTmpl == "" {
-		bodyTmpl = mail.DefaultHTMLBodyTemplate
-	}
+		// Template not found — find the channel and create the template
+		channelID, err := s.notificationClient.FindChannelByName(ctx, notificationChannelName)
+		if err != nil {
+			s.notifTemplateErr = fmt.Errorf("find channel %q: %w", notificationChannelName, err)
+			return
+		}
 
-	data := mail.TemplateData{
-		SenderName:     senderName,
-		RecipientEmail: recipientEmail,
-		ShareLink:      shareLink,
-		Message:        message,
-		ResourceName:   resourceName,
-		ResourceType:   resourceType,
-	}
+		createReq := &notificationv1.CreateTemplateRequest{
+			Name:      notificationTemplateName,
+			ChannelId: channelID,
+			Subject:   defaultSubjectTemplate,
+			Body:      defaultHTMLBodyTemplate,
+			Variables: "SenderName,RecipientEmail,ShareLink,Message,ResourceName,ResourceType",
+			IsDefault: false,
+		}
+		created, err := s.notificationClient.CreateTemplate(ctx, createReq)
+		if err != nil {
+			s.notifTemplateErr = fmt.Errorf("create notification template: %w", err)
+			return
+		}
+		s.notifTemplateID = created.GetId()
+		s.log.Infof("Created notification template: %s", s.notifTemplateID)
+	})
+	return s.notifTemplateID, s.notifTemplateErr
+}
 
-	subject, body, err := mail.RenderTemplate(subjectTmpl, bodyTmpl, data)
+// sendShareEmail sends the share notification email via the notification service.
+func (s *ShareService) sendShareEmail(ctx context.Context, recipientEmail, senderName, resourceName, resourceType, message, shareLink string) error {
+	templateID, err := s.ensureNotificationTemplate(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to render email template: %w", err)
+		return fmt.Errorf("ensure notification template: %w", err)
 	}
 
-	return s.mailSender.Send(recipientEmail, subject, body)
+	variables := map[string]string{
+		"SenderName":     senderName,
+		"RecipientEmail": recipientEmail,
+		"ShareLink":      shareLink,
+		"Message":        message,
+		"ResourceName":   resourceName,
+		"ResourceType":   resourceType,
+	}
+
+	_, err = s.notificationClient.SendNotification(ctx, templateID, recipientEmail, variables)
+	if err != nil {
+		return fmt.Errorf("send notification: %w", err)
+	}
+
+	return nil
 }
 
 // CreateSharePolicy creates a policy restriction for a share link
@@ -397,12 +516,12 @@ func (s *ShareService) CreateSharePolicy(ctx context.Context, req *sharingV1.Cre
 	tenantID := getTenantIDFromContext(ctx)
 	createdBy := getUserIDAsUint32(ctx)
 
-	// Verify share link exists
+	// Verify share link exists and belongs to the caller's tenant
 	entity, err := s.linkRepo.GetByID(ctx, req.ShareLinkId)
 	if err != nil {
 		return nil, err
 	}
-	if entity == nil {
+	if entity == nil || (entity.TenantID != nil && *entity.TenantID != tenantID) {
 		return nil, sharingV1.ErrorShareNotFound("share not found")
 	}
 
@@ -438,15 +557,21 @@ func (s *ShareService) ListSharePolicies(ctx context.Context, req *sharingV1.Lis
 
 // DeleteSharePolicy deletes a policy restriction
 func (s *ShareService) DeleteSharePolicy(ctx context.Context, req *sharingV1.DeleteSharePolicyRequest) (*emptypb.Empty, error) {
+	tenantID := getTenantIDFromContext(ctx)
+
+	// Verify policy exists and belongs to the caller's tenant
+	policy, err := s.policyRepo.GetByID(ctx, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	if policy == nil || (policy.TenantID != nil && *policy.TenantID != tenantID) {
+		return nil, sharingV1.ErrorNotFound("share policy not found")
+	}
+
 	if err := s.policyRepo.Delete(ctx, req.Id); err != nil {
 		return nil, err
 	}
 	return &emptypb.Empty{}, nil
-}
-
-// GetEncryptionKeyHex returns the hex-encoded encryption key (for debugging only)
-func (s *ShareService) GetEncryptionKeyHex() string {
-	return hex.EncodeToString(s.encryptionKey)
 }
 
 // policyTypeToString converts proto enum to ent enum string

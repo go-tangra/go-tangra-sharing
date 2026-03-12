@@ -458,10 +458,6 @@ func (m *CreateShareRequest) validate(all bool) error {
 
 	}
 
-	if m.TemplateId != nil {
-		// no validation rules for TemplateId
-	}
-
 	if len(errors) > 0 {
 		return CreateShareRequestMultiError(errors)
 	}

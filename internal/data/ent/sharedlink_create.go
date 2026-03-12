@@ -149,20 +149,6 @@ func (_c *SharedLinkCreate) SetNillableMessage(v *string) *SharedLinkCreate {
 	return _c
 }
 
-// SetTemplateID sets the "template_id" field.
-func (_c *SharedLinkCreate) SetTemplateID(v string) *SharedLinkCreate {
-	_c.mutation.SetTemplateID(v)
-	return _c
-}
-
-// SetNillableTemplateID sets the "template_id" field if the given value is not nil.
-func (_c *SharedLinkCreate) SetNillableTemplateID(v *string) *SharedLinkCreate {
-	if v != nil {
-		_c.SetTemplateID(*v)
-	}
-	return _c
-}
-
 // SetViewed sets the "viewed" field.
 func (_c *SharedLinkCreate) SetViewed(v bool) *SharedLinkCreate {
 	_c.mutation.SetViewed(v)
@@ -324,11 +310,6 @@ func (_c *SharedLinkCreate) check() error {
 			return &ValidationError{Name: "message", err: fmt.Errorf(`ent: validator failed for field "SharedLink.message": %w`, err)}
 		}
 	}
-	if v, ok := _c.mutation.TemplateID(); ok {
-		if err := sharedlink.TemplateIDValidator(v); err != nil {
-			return &ValidationError{Name: "template_id", err: fmt.Errorf(`ent: validator failed for field "SharedLink.template_id": %w`, err)}
-		}
-	}
 	if _, ok := _c.mutation.Viewed(); !ok {
 		return &ValidationError{Name: "viewed", err: errors.New(`ent: missing required field "SharedLink.viewed"`)}
 	}
@@ -432,10 +413,6 @@ func (_c *SharedLinkCreate) createSpec() (*SharedLink, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Message(); ok {
 		_spec.SetField(sharedlink.FieldMessage, field.TypeString, value)
 		_node.Message = value
-	}
-	if value, ok := _c.mutation.TemplateID(); ok {
-		_spec.SetField(sharedlink.FieldTemplateID, field.TypeString, value)
-		_node.TemplateID = &value
 	}
 	if value, ok := _c.mutation.Viewed(); ok {
 		_spec.SetField(sharedlink.FieldViewed, field.TypeBool, value)
@@ -676,24 +653,6 @@ func (u *SharedLinkUpsert) UpdateMessage() *SharedLinkUpsert {
 // ClearMessage clears the value of the "message" field.
 func (u *SharedLinkUpsert) ClearMessage() *SharedLinkUpsert {
 	u.SetNull(sharedlink.FieldMessage)
-	return u
-}
-
-// SetTemplateID sets the "template_id" field.
-func (u *SharedLinkUpsert) SetTemplateID(v string) *SharedLinkUpsert {
-	u.Set(sharedlink.FieldTemplateID, v)
-	return u
-}
-
-// UpdateTemplateID sets the "template_id" field to the value that was provided on create.
-func (u *SharedLinkUpsert) UpdateTemplateID() *SharedLinkUpsert {
-	u.SetExcluded(sharedlink.FieldTemplateID)
-	return u
-}
-
-// ClearTemplateID clears the value of the "template_id" field.
-func (u *SharedLinkUpsert) ClearTemplateID() *SharedLinkUpsert {
-	u.SetNull(sharedlink.FieldTemplateID)
 	return u
 }
 
@@ -1011,27 +970,6 @@ func (u *SharedLinkUpsertOne) UpdateMessage() *SharedLinkUpsertOne {
 func (u *SharedLinkUpsertOne) ClearMessage() *SharedLinkUpsertOne {
 	return u.Update(func(s *SharedLinkUpsert) {
 		s.ClearMessage()
-	})
-}
-
-// SetTemplateID sets the "template_id" field.
-func (u *SharedLinkUpsertOne) SetTemplateID(v string) *SharedLinkUpsertOne {
-	return u.Update(func(s *SharedLinkUpsert) {
-		s.SetTemplateID(v)
-	})
-}
-
-// UpdateTemplateID sets the "template_id" field to the value that was provided on create.
-func (u *SharedLinkUpsertOne) UpdateTemplateID() *SharedLinkUpsertOne {
-	return u.Update(func(s *SharedLinkUpsert) {
-		s.UpdateTemplateID()
-	})
-}
-
-// ClearTemplateID clears the value of the "template_id" field.
-func (u *SharedLinkUpsertOne) ClearTemplateID() *SharedLinkUpsertOne {
-	return u.Update(func(s *SharedLinkUpsert) {
-		s.ClearTemplateID()
 	})
 }
 
@@ -1526,27 +1464,6 @@ func (u *SharedLinkUpsertBulk) UpdateMessage() *SharedLinkUpsertBulk {
 func (u *SharedLinkUpsertBulk) ClearMessage() *SharedLinkUpsertBulk {
 	return u.Update(func(s *SharedLinkUpsert) {
 		s.ClearMessage()
-	})
-}
-
-// SetTemplateID sets the "template_id" field.
-func (u *SharedLinkUpsertBulk) SetTemplateID(v string) *SharedLinkUpsertBulk {
-	return u.Update(func(s *SharedLinkUpsert) {
-		s.SetTemplateID(v)
-	})
-}
-
-// UpdateTemplateID sets the "template_id" field to the value that was provided on create.
-func (u *SharedLinkUpsertBulk) UpdateTemplateID() *SharedLinkUpsertBulk {
-	return u.Update(func(s *SharedLinkUpsert) {
-		s.UpdateTemplateID()
-	})
-}
-
-// ClearTemplateID clears the value of the "template_id" field.
-func (u *SharedLinkUpsertBulk) ClearTemplateID() *SharedLinkUpsertBulk {
-	return u.Update(func(s *SharedLinkUpsert) {
-		s.ClearTemplateID()
 	})
 }
 

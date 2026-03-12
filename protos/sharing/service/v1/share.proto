@@ -159,14 +159,8 @@ message CreateShareRequest {
     (buf.validate.field).string = {max_len: 2048}
   ];
 
-  // Optional template ID (uses default if not specified)
-  optional string template_id = 5 [
-    json_name = "templateId",
-    (buf.validate.field).string = {
-      max_len: 36
-      pattern: "^[a-fA-F0-9\\-]*$"
-    }
-  ];
+  // Reserved field 5 (was template_id, removed)
+  reserved 5;
 
   // Optional access restriction policies
   repeated CreateSharePolicyInput policies = 6 [json_name = "policies"];

@@ -19,7 +19,7 @@ import (
 
 // initApp initializes the Wire provider entry for the kratos application
 func initApp(context *bootstrap.Context) (*kratos.App, func(), error) {
-	certManager, err := cert.NewCertManager(context)
+	v, err := cert.NewCertManager(context)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -28,27 +28,38 @@ func initApp(context *bootstrap.Context) (*kratos.App, func(), error) {
 		return nil, nil, err
 	}
 	sharedLinkRepo := data.NewSharedLinkRepo(context, entClient)
-	emailTemplateRepo := data.NewEmailTemplateRepo(context, entClient)
 	sharePolicyRepo := data.NewSharePolicyRepo(context, entClient)
-	wardenClient, cleanup2, err := data.NewWardenClient(context)
+	client, err := data.NewRegistrationClient(context)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	paperlessClient, cleanup3, err := data.NewPaperlessClient(context)
+	moduleDialer := data.NewModuleDialer(context, client)
+	wardenClient, cleanup2, err := data.NewWardenClient(context, moduleDialer)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	paperlessClient, cleanup3, err := data.NewPaperlessClient(context, moduleDialer)
 	if err != nil {
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	sender := data.NewMailSender()
-	shareService := service.NewShareService(context, sharedLinkRepo, emailTemplateRepo, sharePolicyRepo, wardenClient, paperlessClient, sender)
-	templateService := service.NewTemplateService(context, emailTemplateRepo)
+	notificationClient, cleanup4, err := data.NewNotificationClient(context, moduleDialer)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	shareService := service.NewShareService(context, sharedLinkRepo, sharePolicyRepo, wardenClient, paperlessClient, notificationClient)
 	backupService := service.NewBackupService(context, entClient)
-	grpcServer := server.NewGRPCServer(context, certManager, shareService, templateService, backupService)
+	grpcServer := server.NewGRPCServer(context, v, shareService, backupService)
 	httpServer := server.NewHTTPServer(context, shareService)
-	app := newApp(context, grpcServer, httpServer)
+	app := newApp(context, grpcServer, httpServer, client)
 	return app, func() {
+		cleanup4()
 		cleanup3()
 		cleanup2()
 		cleanup()

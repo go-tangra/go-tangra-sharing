@@ -1,8 +1,7 @@
 {
   "menu": {
     "sharing": "Sharing",
-    "links": "Shared Links",
-    "templates": "Email Templates"
+    "links": "Shared Links"
   },
   "page": {
     "link": {
@@ -34,27 +33,6 @@
       "messagePlaceholder": "Optional message to include in the email",
       "selectResourceType": "Select resource type",
       "selectTemplate": "Select email template (optional)"
-    },
-    "template": {
-      "title": "Email Templates",
-      "name": "Template Name",
-      "subject": "Email Subject",
-      "htmlBody": "HTML Body",
-      "isDefault": "Default Template",
-      "create": "Create Template",
-      "edit": "Edit Template",
-      "view": "View Template",
-      "delete": "Delete Template",
-      "preview": "Preview",
-      "confirmDelete": "Are you sure you want to delete this email template?",
-      "createSuccess": "Email template created successfully",
-      "updateSuccess": "Email template updated successfully",
-      "deleteSuccess": "Email template deleted successfully",
-      "namePlaceholder": "Enter template name",
-      "subjectPlaceholder": "Enter email subject (supports Go template variables)",
-      "htmlBodyPlaceholder": "Enter HTML body (supports Go template variables)",
-      "variables": "Available Variables",
-      "variableHelp": "Use these in subject and body: {{.SenderName}}, {{.RecipientEmail}}, {{.ShareLink}}, {{.Message}}, {{.ResourceName}}, {{.ResourceType}}"
     },
     "policy": {
       "title": "Access Restrictions",

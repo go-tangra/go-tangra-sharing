@@ -12,7 +12,6 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
-	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/emailtemplate"
 	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/sharedlink"
 	"github.com/go-tangra/go-tangra-sharing/internal/data/ent/sharepolicy"
 )
@@ -75,9 +74,8 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			emailtemplate.Table: emailtemplate.ValidColumn,
-			sharepolicy.Table:   sharepolicy.ValidColumn,
-			sharedlink.Table:    sharedlink.ValidColumn,
+			sharepolicy.Table: sharepolicy.ValidColumn,
+			sharedlink.Table:  sharedlink.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)
