@@ -15,6 +15,7 @@ import (
 
 	sharingV1 "github.com/go-tangra/go-tangra-sharing/gen/go/sharing/service/v1"
 	"github.com/go-tangra/go-tangra-sharing/internal/cert"
+	"github.com/go-tangra/go-tangra-sharing/internal/metrics"
 	"github.com/go-tangra/go-tangra-sharing/internal/service"
 
 	"github.com/go-tangra/go-tangra-common/middleware/audit"
@@ -35,6 +36,7 @@ func systemViewerMiddleware() middleware.Middleware {
 func NewGRPCServer(
 	ctx *bootstrap.Context,
 	certManager *cert.CertManager,
+	collector *metrics.Collector,
 	shareSvc *service.ShareService,
 	backupSvc *service.BackupService,
 ) *grpc.Server {
@@ -71,6 +73,7 @@ func NewGRPCServer(
 	// Add middleware
 	var ms []middleware.Middleware
 	ms = append(ms, recovery.Recovery())
+	ms = append(ms, collector.Middleware())
 	ms = append(ms, systemViewerMiddleware())
 	ms = append(ms, tracing.Server())
 	ms = append(ms, metadata.Server())

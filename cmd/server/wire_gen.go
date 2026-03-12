@@ -7,9 +7,13 @@
 package main
 
 import (
+	gocontext "context"
+
 	"github.com/go-kratos/kratos/v2"
+	"github.com/go-tangra/go-tangra-common/viewer"
 	"github.com/go-tangra/go-tangra-sharing/internal/cert"
 	"github.com/go-tangra/go-tangra-sharing/internal/data"
+	"github.com/go-tangra/go-tangra-sharing/internal/metrics"
 	"github.com/go-tangra/go-tangra-sharing/internal/server"
 	"github.com/go-tangra/go-tangra-sharing/internal/service"
 	"github.com/tx7do/kratos-bootstrap/bootstrap"
@@ -55,10 +59,18 @@ func initApp(context *bootstrap.Context) (*kratos.App, func(), error) {
 	}
 	shareService := service.NewShareService(context, sharedLinkRepo, sharePolicyRepo, wardenClient, paperlessClient, notificationClient)
 	backupService := service.NewBackupService(context, entClient)
-	grpcServer := server.NewGRPCServer(context, v, shareService, backupService)
+	collector := metrics.NewCollector(context)
+	statisticsRepo := data.NewStatisticsRepo(context, entClient)
+	grpcServer := server.NewGRPCServer(context, v, collector, shareService, backupService)
 	httpServer := server.NewHTTPServer(context, shareService)
+
+	// Seed Prometheus metrics from database
+	seedCtx := viewer.NewSystemViewerContext(gocontext.Background())
+	collector.Seed(seedCtx, statisticsRepo)
+
 	app := newApp(context, grpcServer, httpServer, client)
 	return app, func() {
+		collector.Stop(gocontext.Background())
 		cleanup4()
 		cleanup3()
 		cleanup2()

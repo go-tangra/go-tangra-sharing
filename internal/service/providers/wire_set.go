@@ -8,6 +8,7 @@ package providers
 import (
 	"github.com/google/wire"
 
+	"github.com/go-tangra/go-tangra-sharing/internal/metrics"
 	"github.com/go-tangra/go-tangra-sharing/internal/service"
 )
 
@@ -15,4 +16,5 @@ import (
 var ProviderSet = wire.NewSet(
 	service.NewShareService,
 	service.NewBackupService,
+	metrics.NewCollector,
 )

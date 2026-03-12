@@ -22,4 +22,5 @@ var ProviderSet = wire.NewSet(
 	data.NewNotificationClient,
 	data.NewSharedLinkRepo,
 	data.NewSharePolicyRepo,
+	data.NewStatisticsRepo,
 )
