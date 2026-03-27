@@ -2,9 +2,7 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/tx7do/kratos-bootstrap/bootstrap"
@@ -12,6 +10,7 @@ import (
 
 	entCrud "github.com/tx7do/go-crud/entgo"
 
+	"github.com/go-tangra/go-tangra-common/backup"
 	"github.com/go-tangra/go-tangra-common/grpcx"
 
 	sharingV1 "github.com/go-tangra/go-tangra-sharing/gen/go/sharing/service/v1"
@@ -21,9 +20,11 @@ import (
 )
 
 const (
-	backupModule  = "sharing"
-	backupVersion = "1.0"
+	backupModule        = "sharing"
+	backupSchemaVersion = 1
 )
+
+var backupMigrations = backup.NewMigrationRegistry(backupModule)
 
 type BackupService struct {
 	sharingV1.UnimplementedBackupServiceServer
@@ -39,34 +40,7 @@ func NewBackupService(ctx *bootstrap.Context, entClient *entCrud.EntClient[*ent.
 	}
 }
 
-type backupData struct {
-	Module     string         `json:"module"`
-	Version    string         `json:"version"`
-	ExportedAt time.Time      `json:"exportedAt"`
-	TenantID   uint32         `json:"tenantId"`
-	FullBackup bool           `json:"fullBackup"`
-	Data       backupEntities `json:"data"`
-}
-
-type backupEntities struct {
-	SharedLinks   []json.RawMessage `json:"sharedLinks,omitempty"`
-	SharePolicies []json.RawMessage `json:"sharePolicies,omitempty"`
-}
-
-func marshalEntities[T any](entities []*T) ([]json.RawMessage, error) {
-	result := make([]json.RawMessage, 0, len(entities))
-	for _, e := range entities {
-		b, err := json.Marshal(e)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, b)
-	}
-	return result, nil
-}
-
 func (s *BackupService) ExportBackup(ctx context.Context, req *sharingV1.ExportBackupRequest) (*sharingV1.ExportBackupResponse, error) {
-	// Only platform admins can export backups
 	if !grpcx.IsPlatformAdmin(ctx) {
 		return nil, fmt.Errorf("only platform admins can export backups")
 	}
@@ -82,164 +56,154 @@ func (s *BackupService) ExportBackup(ctx context.Context, req *sharingV1.ExportB
 	}
 
 	client := s.entClient.Client()
-	now := time.Now()
+	a := backup.NewArchive(backupModule, backupSchemaVersion, tenantID, full)
 
-	links, err := s.exportSharedLinks(ctx, client, tenantID, full)
+	// Export shared links
+	linkQuery := client.SharedLink.Query()
+	if !full {
+		linkQuery = linkQuery.Where(sharedlink.TenantID(tenantID))
+	}
+	links, err := linkQuery.All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("export shared links: %w", err)
 	}
-	policies, err := s.exportSharePolicies(ctx, client, tenantID, full)
+	if err := backup.SetEntities(a, "sharedLinks", links); err != nil {
+		return nil, fmt.Errorf("set shared links: %w", err)
+	}
+
+	// Export share policies
+	policyQuery := client.SharePolicy.Query()
+	if !full {
+		policyQuery = policyQuery.Where(sharepolicy.TenantID(tenantID))
+	}
+	policies, err := policyQuery.All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("export share policies: %w", err)
 	}
-
-	backup := backupData{
-		Module:     backupModule,
-		Version:    backupVersion,
-		ExportedAt: now,
-		TenantID:   tenantID,
-		FullBackup: full,
-		Data: backupEntities{
-			SharedLinks:   links,
-			SharePolicies: policies,
-		},
+	if err := backup.SetEntities(a, "sharePolicies", policies); err != nil {
+		return nil, fmt.Errorf("set share policies: %w", err)
 	}
 
-	data, err := json.Marshal(backup)
+	data, err := backup.Pack(a)
 	if err != nil {
-		return nil, fmt.Errorf("marshal backup: %w", err)
+		return nil, fmt.Errorf("pack backup: %w", err)
 	}
 
-	entityCounts := map[string]int64{
-		"sharedLinks":   int64(len(links)),
-		"sharePolicies": int64(len(policies)),
-	}
-
-	s.log.Infof("exported backup: module=%s tenant=%d full=%v entities=%v", backupModule, tenantID, full, entityCounts)
+	s.log.Infof("exported backup: module=%s tenant=%d full=%v entities=%v", backupModule, tenantID, full, a.Manifest.EntityCounts)
 
 	return &sharingV1.ExportBackupResponse{
-		Data:         data,
-		Module:       backupModule,
-		Version:      backupVersion,
-		ExportedAt:   timestamppb.New(now),
-		TenantId:     tenantID,
-		EntityCounts: entityCounts,
+		Data:          data,
+		Module:        backupModule,
+		Version:       fmt.Sprintf("%d", backupSchemaVersion),
+		ExportedAt:    timestamppb.New(a.Manifest.ExportedAt),
+		TenantId:      tenantID,
+		EntityCounts:  a.Manifest.EntityCounts,
+		SchemaVersion: int32(backupSchemaVersion),
 	}, nil
 }
 
 func (s *BackupService) ImportBackup(ctx context.Context, req *sharingV1.ImportBackupRequest) (*sharingV1.ImportBackupResponse, error) {
-	// Only platform admins can import backups
 	if !grpcx.IsPlatformAdmin(ctx) {
 		return nil, fmt.Errorf("only platform admins can import backups")
 	}
 
 	tenantID := grpcx.GetTenantIDFromContext(ctx)
-	mode := req.GetMode()
+	mode := mapSharingRestoreMode(req.GetMode())
 
-	var backup backupData
-	if err := json.Unmarshal(req.GetData(), &backup); err != nil {
-		return nil, fmt.Errorf("invalid backup data: %w", err)
+	a, err := backup.Unpack(req.GetData())
+	if err != nil {
+		return nil, fmt.Errorf("unpack backup: %w", err)
 	}
 
-	if backup.Module != backupModule {
-		return nil, fmt.Errorf("backup module mismatch: expected %s, got %s", backupModule, backup.Module)
-	}
-	if backup.Version != backupVersion {
-		return nil, fmt.Errorf("backup version mismatch: expected %s, got %s", backupVersion, backup.Version)
+	if err := backup.Validate(a, backupModule, backupSchemaVersion); err != nil {
+		return nil, err
 	}
 
-	if backup.FullBackup {
+	sourceVersion := a.Manifest.SchemaVersion
+	applied, err := backupMigrations.RunMigrations(a, backupSchemaVersion)
+	if err != nil {
+		return nil, fmt.Errorf("migration failed: %w", err)
+	}
+
+	if a.Manifest.FullBackup {
 		tenantID = 0
 	}
 
 	client := s.entClient.Client()
-	var results []*sharingV1.EntityImportResult
-	var warnings []string
+	result := backup.NewRestoreResult(sourceVersion, backupSchemaVersion, applied)
 
-	importFuncs := []struct {
-		name  string
-		items []json.RawMessage
-		fn    func(context.Context, *ent.Client, []json.RawMessage, uint32, bool, sharingV1.RestoreMode) (*sharingV1.EntityImportResult, []string)
-	}{
-		{"sharedLinks", backup.Data.SharedLinks, s.importSharedLinks},
-		{"sharePolicies", backup.Data.SharePolicies, s.importSharePolicies},
-	}
+	// Import in FK order: links → policies
+	s.importSharedLinks(ctx, client, a, tenantID, a.Manifest.FullBackup, mode, result)
+	s.importSharePolicies(ctx, client, a, tenantID, a.Manifest.FullBackup, mode, result)
 
-	for _, imp := range importFuncs {
-		if len(imp.items) == 0 {
-			continue
+	s.log.Infof("imported backup: module=%s tenant=%d migrations=%d results=%d",
+		backupModule, tenantID, applied, len(result.Results))
+
+	protoResults := make([]*sharingV1.EntityImportResult, len(result.Results))
+	for i, r := range result.Results {
+		protoResults[i] = &sharingV1.EntityImportResult{
+			EntityType: r.EntityType,
+			Total:      r.Total,
+			Created:    r.Created,
+			Updated:    r.Updated,
+			Skipped:    r.Skipped,
+			Failed:     r.Failed,
 		}
-		result, w := imp.fn(ctx, client, imp.items, tenantID, backup.FullBackup, mode)
-		if result != nil {
-			results = append(results, result)
-		}
-		warnings = append(warnings, w...)
 	}
-
-	s.log.Infof("imported backup: module=%s tenant=%d mode=%v results=%d warnings=%d", backupModule, tenantID, mode, len(results), len(warnings))
 
 	return &sharingV1.ImportBackupResponse{
-		Success:  true,
-		Results:  results,
-		Warnings: warnings,
+		Success:           result.Success,
+		Results:           protoResults,
+		Warnings:          result.Warnings,
+		SourceVersion:     int32(result.SourceVersion),
+		TargetVersion:     int32(result.TargetVersion),
+		MigrationsApplied: int32(result.MigrationsApplied),
 	}, nil
 }
 
-// --- Export helpers ---
-
-func (s *BackupService) exportSharedLinks(ctx context.Context, client *ent.Client, tenantID uint32, full bool) ([]json.RawMessage, error) {
-	query := client.SharedLink.Query()
-	if !full {
-		query = query.Where(sharedlink.TenantID(tenantID))
+func mapSharingRestoreMode(m sharingV1.RestoreMode) backup.RestoreMode {
+	if m == sharingV1.RestoreMode_RESTORE_MODE_OVERWRITE {
+		return backup.RestoreModeOverwrite
 	}
-	entities, err := query.All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return marshalEntities(entities)
-}
-
-func (s *BackupService) exportSharePolicies(ctx context.Context, client *ent.Client, tenantID uint32, full bool) ([]json.RawMessage, error) {
-	query := client.SharePolicy.Query()
-	if !full {
-		query = query.Where(sharepolicy.TenantID(tenantID))
-	}
-	entities, err := query.All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return marshalEntities(entities)
+	return backup.RestoreModeSkip
 }
 
 // --- Import helpers ---
 
-func (s *BackupService) importSharedLinks(ctx context.Context, client *ent.Client, items []json.RawMessage, tenantID uint32, full bool, mode sharingV1.RestoreMode) (*sharingV1.EntityImportResult, []string) {
-	result := &sharingV1.EntityImportResult{EntityType: "sharedLinks", Total: int64(len(items))}
-	var warnings []string
+func (s *BackupService) importSharedLinks(ctx context.Context, client *ent.Client, a *backup.Archive, tenantID uint32, full bool, mode backup.RestoreMode, result *backup.RestoreResult) {
+	links, err := backup.GetEntities[ent.SharedLink](a, "sharedLinks")
+	if err != nil {
+		result.AddWarning(fmt.Sprintf("sharedLinks: unmarshal error: %v", err))
+		return
+	}
+	if len(links) == 0 {
+		return
+	}
 
-	for _, raw := range items {
-		var e ent.SharedLink
-		if err := json.Unmarshal(raw, &e); err != nil {
-			warnings = append(warnings, fmt.Sprintf("sharedLinks: unmarshal error: %v", err))
-			result.Failed++
-			continue
-		}
+	er := backup.EntityResult{EntityType: "sharedLinks", Total: int64(len(links))}
 
+	for _, e := range links {
 		tid := tenantID
 		if full && e.TenantID != nil {
 			tid = *e.TenantID
 		}
 
-		existing, _ := client.SharedLink.Get(ctx, e.ID)
+		existing, getErr := client.SharedLink.Get(ctx, e.ID)
+		if getErr != nil && !ent.IsNotFound(getErr) {
+			result.AddWarning(fmt.Sprintf("sharedLinks: lookup %s: %v", e.ID, getErr))
+			er.Failed++
+			continue
+		}
+
 		if existing != nil {
-			if mode == sharingV1.RestoreMode_RESTORE_MODE_SKIP {
-				result.Skipped++
+			if mode == backup.RestoreModeSkip {
+				er.Skipped++
 				continue
 			}
 			// Never allow resurrection of viewed or revoked shares
 			if existing.Viewed || existing.Revoked {
-				warnings = append(warnings, fmt.Sprintf("sharedLinks: skip %s: cannot overwrite viewed/revoked share", e.ID))
-				result.Skipped++
+				result.AddWarning(fmt.Sprintf("sharedLinks: skip %s: cannot overwrite viewed/revoked share", e.ID))
+				er.Skipped++
 				continue
 			}
 			builder := client.SharedLink.UpdateOneID(e.ID).
@@ -249,7 +213,6 @@ func (s *BackupService) importSharedLinks(ctx context.Context, client *ent.Clien
 				SetToken(e.Token).
 				SetRecipientEmail(e.RecipientEmail).
 				SetMessage(e.Message).
-
 				SetViewed(e.Viewed).
 				SetNillableViewedAt(e.ViewedAt).
 				SetViewedIP(e.ViewedIP).
@@ -265,13 +228,12 @@ func (s *BackupService) importSharedLinks(ctx context.Context, client *ent.Clien
 			} else {
 				builder.ClearEncryptionNonce()
 			}
-			_, err := builder.Save(ctx)
-			if err != nil {
-				warnings = append(warnings, fmt.Sprintf("sharedLinks: update %s: %v", e.ID, err))
-				result.Failed++
+			if _, err := builder.Save(ctx); err != nil {
+				result.AddWarning(fmt.Sprintf("sharedLinks: update %s: %v", e.ID, err))
+				er.Failed++
 				continue
 			}
-			result.Updated++
+			er.Updated++
 		} else {
 			// For new creates, strip ciphertext from viewed/revoked shares
 			hasContent := e.EncryptedContent != nil
@@ -290,7 +252,6 @@ func (s *BackupService) importSharedLinks(ctx context.Context, client *ent.Clien
 				SetToken(e.Token).
 				SetRecipientEmail(e.RecipientEmail).
 				SetMessage(e.Message).
-
 				SetViewed(e.Viewed).
 				SetNillableViewedAt(e.ViewedAt).
 				SetViewedIP(e.ViewedIP).
@@ -303,58 +264,63 @@ func (s *BackupService) importSharedLinks(ctx context.Context, client *ent.Clien
 			if hasNonce {
 				createBuilder.SetEncryptionNonce(*e.EncryptionNonce)
 			}
-			_, err := createBuilder.Save(ctx)
-			if err != nil {
-				warnings = append(warnings, fmt.Sprintf("sharedLinks: create %s: %v", e.ID, err))
-				result.Failed++
+			if _, err := createBuilder.Save(ctx); err != nil {
+				result.AddWarning(fmt.Sprintf("sharedLinks: create %s: %v", e.ID, err))
+				er.Failed++
 				continue
 			}
-			result.Created++
+			er.Created++
 		}
 	}
 
-	return result, warnings
+	result.AddResult(er)
 }
 
-func (s *BackupService) importSharePolicies(ctx context.Context, client *ent.Client, items []json.RawMessage, tenantID uint32, full bool, mode sharingV1.RestoreMode) (*sharingV1.EntityImportResult, []string) {
-	result := &sharingV1.EntityImportResult{EntityType: "sharePolicies", Total: int64(len(items))}
-	var warnings []string
+func (s *BackupService) importSharePolicies(ctx context.Context, client *ent.Client, a *backup.Archive, tenantID uint32, full bool, mode backup.RestoreMode, result *backup.RestoreResult) {
+	policies, err := backup.GetEntities[ent.SharePolicy](a, "sharePolicies")
+	if err != nil {
+		result.AddWarning(fmt.Sprintf("sharePolicies: unmarshal error: %v", err))
+		return
+	}
+	if len(policies) == 0 {
+		return
+	}
 
-	for _, raw := range items {
-		var e ent.SharePolicy
-		if err := json.Unmarshal(raw, &e); err != nil {
-			warnings = append(warnings, fmt.Sprintf("sharePolicies: unmarshal error: %v", err))
-			result.Failed++
-			continue
-		}
+	er := backup.EntityResult{EntityType: "sharePolicies", Total: int64(len(policies))}
 
+	for _, e := range policies {
 		tid := tenantID
 		if full && e.TenantID != nil {
 			tid = *e.TenantID
 		}
 
-		existing, _ := client.SharePolicy.Get(ctx, e.ID)
+		existing, getErr := client.SharePolicy.Get(ctx, e.ID)
+		if getErr != nil && !ent.IsNotFound(getErr) {
+			result.AddWarning(fmt.Sprintf("sharePolicies: lookup %s: %v", e.ID, getErr))
+			er.Failed++
+			continue
+		}
+
 		if existing != nil {
-			if mode == sharingV1.RestoreMode_RESTORE_MODE_SKIP {
-				result.Skipped++
+			if mode == backup.RestoreModeSkip {
+				er.Skipped++
 				continue
 			}
-			_, err := client.SharePolicy.UpdateOneID(e.ID).
+			if _, err := client.SharePolicy.UpdateOneID(e.ID).
 				SetShareLinkID(e.ShareLinkID).
 				SetType(e.Type).
 				SetMethod(e.Method).
 				SetValue(e.Value).
 				SetReason(e.Reason).
 				SetNillableCreateBy(e.CreateBy).
-				Save(ctx)
-			if err != nil {
-				warnings = append(warnings, fmt.Sprintf("sharePolicies: update %s: %v", e.ID, err))
-				result.Failed++
+				Save(ctx); err != nil {
+				result.AddWarning(fmt.Sprintf("sharePolicies: update %s: %v", e.ID, err))
+				er.Failed++
 				continue
 			}
-			result.Updated++
+			er.Updated++
 		} else {
-			_, err := client.SharePolicy.Create().
+			if _, err := client.SharePolicy.Create().
 				SetID(e.ID).
 				SetNillableTenantID(&tid).
 				SetShareLinkID(e.ShareLinkID).
@@ -364,15 +330,14 @@ func (s *BackupService) importSharePolicies(ctx context.Context, client *ent.Cli
 				SetReason(e.Reason).
 				SetNillableCreateBy(e.CreateBy).
 				SetNillableCreateTime(e.CreateTime).
-				Save(ctx)
-			if err != nil {
-				warnings = append(warnings, fmt.Sprintf("sharePolicies: create %s: %v", e.ID, err))
-				result.Failed++
+				Save(ctx); err != nil {
+				result.AddWarning(fmt.Sprintf("sharePolicies: create %s: %v", e.ID, err))
+				er.Failed++
 				continue
 			}
-			result.Created++
+			er.Created++
 		}
 	}
 
-	return result, warnings
+	result.AddResult(er)
 }

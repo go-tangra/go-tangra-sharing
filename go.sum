@@ -92,6 +92,8 @@ github.com/go-tangra/go-tangra-common v1.10.0 h1:up0b6TRzOv36uZy3mGcOx/GOv/6D3ja
 github.com/go-tangra/go-tangra-common v1.10.0/go.mod h1:n23r4Zu0zrneqg/Qo5wz7Wc3vBjRz+imm7bmBdeBN1I=
 github.com/go-tangra/go-tangra-common v1.11.0 h1:sbQlHdhEtoKq/27xQ5Yw9gYM3JOxGzZ7Tw5WUS4e9ho=
 github.com/go-tangra/go-tangra-common v1.11.0/go.mod h1:n23r4Zu0zrneqg/Qo5wz7Wc3vBjRz+imm7bmBdeBN1I=
+github.com/go-tangra/go-tangra-common v1.12.0 h1:8M04lDnFBc4+ZkSo7IuSa4nvxIPTwi1TO/HVlBksnVE=
+github.com/go-tangra/go-tangra-common v1.12.0/go.mod h1:n23r4Zu0zrneqg/Qo5wz7Wc3vBjRz+imm7bmBdeBN1I=
 github.com/go-tangra/go-tangra-paperless v0.1.0 h1:3Kj+66qr9pi6PU47yPYpqt8tOqz5ArA4aWDDxENMR4U=
 github.com/go-tangra/go-tangra-paperless v0.1.0/go.mod h1:c435rL3t6W4tMqrd6qZq7cIhVdE3FvZnm0VsID4LDoY=
 github.com/go-tangra/go-tangra-warden v0.1.0 h1:EVeLkQlmhlM4wZTPBVBb7p0kT1bTwZK15SimFmZ/BbY=
