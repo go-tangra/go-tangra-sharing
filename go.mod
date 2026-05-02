@@ -10,7 +10,7 @@ require (
 	entgo.io/ent v0.14.5
 	github.com/go-kratos/kratos/v2 v2.9.2
 	github.com/go-sql-driver/mysql v1.9.3
-	github.com/go-tangra/go-tangra-common v1.12.0
+	github.com/go-tangra/go-tangra-common v1.17.1
 	github.com/go-tangra/go-tangra-paperless v0.1.0
 	github.com/go-tangra/go-tangra-warden v0.1.0
 	github.com/google/uuid v1.6.0
@@ -131,3 +131,6 @@ require (
 
 // Conflicts with github.com/go-kratos/kratos/v2 (dual proto registration of errors/errors.proto)
 exclude buf.build/gen/go/kratos/apis/protocolbuffers/go v1.36.11-20230105082401-c2de25f14fa4.1
+
+// Phase 1 of the registration rework: pull cert.Ensure() from the
+// sibling clone of go-tangra-common until a release lands.
