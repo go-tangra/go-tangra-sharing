@@ -10,6 +10,7 @@ import (
 	"github.com/go-kratos/kratos/v2/middleware/tracing"
 	"github.com/go-kratos/kratos/v2/transport/grpc"
 	"github.com/tx7do/kratos-bootstrap/bootstrap"
+	commonV1 "github.com/go-tangra/go-tangra-common/gen/go/common/service/v1"
 
 	"github.com/go-tangra/go-tangra-common/viewer"
 
@@ -39,6 +40,7 @@ func NewGRPCServer(
 	collector *metrics.Collector,
 	shareSvc *service.ShareService,
 	backupSvc *service.BackupService,
+	sqlBackupSvc *service.SqlBackupService,
 ) *grpc.Server {
 	cfg := ctx.GetConfig()
 	l := ctx.NewLoggerHelper("sharing/grpc")
@@ -110,6 +112,7 @@ func NewGRPCServer(
 	// Register services
 	sharingV1.RegisterRedactedSharingShareServiceServer(srv, shareSvc, nil)
 	sharingV1.RegisterRedactedBackupServiceServer(srv, backupSvc, nil)
+	commonV1.RegisterBackupServiceServer(srv, sqlBackupSvc)
 
 	return srv
 }
