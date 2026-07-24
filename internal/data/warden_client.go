@@ -75,7 +75,12 @@ func ForwardMetadataContext(ctx context.Context, tenantID uint32) context.Contex
 
 	// Forward user identity from incoming context so upstream permission checks pass
 	if inMD, ok := grpcMD.FromIncomingContext(ctx); ok {
-		for _, key := range []string{"x-md-global-user-id", "x-md-global-username", "x-md-global-roles"} {
+		// Prefer the gateway-signed tenant-id from the incoming context over the
+		// param: it keeps the claim assertion (x-md-global-claims-sig) valid on
+		// warden's side under claims-binding enforce, and prevents forwarding a
+		// tenant that differs from the one the gateway signed. sig/exp are
+		// forwarded so warden re-verifies the original gateway signature.
+		for _, key := range []string{"x-md-global-tenant-id", "x-md-global-user-id", "x-md-global-username", "x-md-global-roles", "x-md-global-claims-sig", "x-md-global-claims-exp"} {
 			if vals := inMD.Get(key); len(vals) > 0 {
 				outMD.Set(key, vals[0])
 			}
@@ -94,7 +99,12 @@ func DetachedMetadataContext(ctx context.Context, tenantID uint32) context.Conte
 	})
 
 	if inMD, ok := grpcMD.FromIncomingContext(ctx); ok {
-		for _, key := range []string{"x-md-global-user-id", "x-md-global-username", "x-md-global-roles"} {
+		// Prefer the gateway-signed tenant-id from the incoming context over the
+		// param: it keeps the claim assertion (x-md-global-claims-sig) valid on
+		// warden's side under claims-binding enforce, and prevents forwarding a
+		// tenant that differs from the one the gateway signed. sig/exp are
+		// forwarded so warden re-verifies the original gateway signature.
+		for _, key := range []string{"x-md-global-tenant-id", "x-md-global-user-id", "x-md-global-username", "x-md-global-roles", "x-md-global-claims-sig", "x-md-global-claims-exp"} {
 			if vals := inMD.Get(key); len(vals) > 0 {
 				outMD.Set(key, vals[0])
 			}
